@@ -1,0 +1,183 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Filter for subtle ink texture -->
+    <filter id="softGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.12" />
+    </filter>
+
+    <!-- Wave pattern for background -->
+    <pattern id="wavePattern" width="120" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 0 20 Q 30 5 60 20 T 120 20" fill="none" stroke="#7BA9CC" stroke-width="1.6" stroke-opacity="0.38" />
+      <path d="M 0 32 Q 30 18 60 32 T 120 32" fill="none" stroke="#7BA9CC" stroke-width="1.2" stroke-opacity="0.28" />
+      <path d="M 0 8 Q 30 -5 60 8 T 120 8" fill="none" stroke="#7BA9CC" stroke-width="1.2" stroke-opacity="0.25" />
+    </pattern>
+
+    <clipPath id="circleClip">
+      <circle cx="250" cy="245" r="195" />
+    </clipPath>
+  </defs>
+
+  <!-- Background container (optional subtle warm white circle) -->
+  <circle cx="250" cy="245" r="192" fill="#FFFFFF" />
+
+  <!-- Background traditional wave lines clipped to inner circle -->
+  <g clip-path="url(#circleClip)">
+    <rect x="50" y="50" width="400" height="390" fill="url(#wavePattern)" />
+
+    <!-- Additional stylized wave scrolls -->
+    <path d="M 170 140 C 210 110, 270 125, 310 145 C 340 160, 390 150, 420 135" fill="none" stroke="#689ECA" stroke-width="1.5" stroke-opacity="0.4" />
+    <path d="M 150 190 C 200 160, 260 175, 300 200 C 340 225, 400 205, 430 190" fill="none" stroke="#689ECA" stroke-width="1.4" stroke-opacity="0.35" />
+    <path d="M 140 250 C 190 220, 240 235, 290 260 C 330 280, 390 270, 440 245" fill="none" stroke="#689ECA" stroke-width="1.3" stroke-opacity="0.3" />
+    <path d="M 160 300 C 210 275, 270 290, 320 320" fill="none" stroke="#689ECA" stroke-width="1.2" stroke-opacity="0.25" />
+  </g>
+
+  <!-- Red Enso/Zen Circular Brush Ring -->
+  <g fill="#B81D24">
+    <!-- Main top arch & right brush stroke -->
+    <path d="M 155 85 C 190 55, 260 38, 335 48 C 395 56, 442 98, 458 155 C 472 205, 465 270, 438 325 C 418 365, 385 402, 342 425 C 322 436, 298 445, 280 448 C 265 450, 252 447, 248 438 C 245 430, 255 423, 270 418 C 320 405, 375 365, 405 315 C 430 270, 435 210, 420 160 C 408 118, 372 82, 325 72 C 265 60, 205 75, 165 105 C 152 115, 142 120, 138 112 C 135 105, 142 95, 155 85 Z" />
+    <!-- Left lower tapered stroke -->
+    <path d="M 75 160 C 65 190, 58 235, 62 278 C 66 325, 88 375, 122 410 C 138 426, 155 438, 172 445 C 178 448, 175 455, 168 453 C 145 445, 120 428, 100 402 C 68 360, 48 305, 46 250 C 44 205, 52 165, 66 135 C 70 128, 77 132, 77 140 C 76 146, 75 153, 75 160 Z" />
+    <!-- Splatters & organic brush taper -->
+    <path d="M 148 45 C 158 42, 172 40, 185 41 C 180 46, 165 52, 150 54 Z" opacity="0.85" />
+    <path d="M 445 130 C 452 145, 458 165, 460 180 C 456 182, 452 165, 442 145 Z" opacity="0.9" />
+  </g>
+
+  <!-- Blue Brush Calligraphy: UTET (Vertical on the left) -->
+  <g fill="#1D4ED8" stroke="#1D4ED8" stroke-linejoin="round" stroke-linecap="round">
+    <!-- Letter 'U' -->
+    <path d="M 98 95 C 105 92, 114 96, 118 108 C 114 125, 112 145, 115 162 C 118 175, 132 178, 145 170 C 155 162, 158 142, 158 120 C 158 105, 162 95, 170 95 C 175 95, 176 105, 175 125 C 173 155, 165 182, 142 195 C 122 205, 102 198, 95 178 C 88 158, 90 128, 92 105 C 93 98, 95 95, 98 95 Z" stroke-width="2" />
+
+    <!-- Letter 'T' -->
+    <!-- Top crossbar -->
+    <path d="M 88 200 C 115 195, 152 190, 182 195 C 188 196, 186 206, 178 208 C 150 212, 120 215, 92 216 C 84 216, 82 204, 88 200 Z" stroke-width="3" />
+    <!-- Downstroke -->
+    <path d="M 130 205 C 136 205, 138 215, 137 230 C 135 255, 128 278, 128 295 C 128 302, 120 302, 118 295 C 118 275, 122 245, 124 220 C 125 210, 126 205, 130 205 Z" stroke-width="4" />
+
+    <!-- Letter 'E' -->
+    <!-- Back spine -->
+    <path d="M 96 312 C 102 312, 105 320, 104 335 C 102 360, 100 385, 102 405 C 102 412, 94 414, 92 405 C 90 380, 92 345, 94 320 C 94 314, 95 312, 96 312 Z" stroke-width="3" />
+    <!-- Top arm -->
+    <path d="M 98 318 C 120 312, 145 310, 162 316 C 168 318, 164 326, 156 328 C 138 332, 118 332, 102 334 Z" stroke-width="2" />
+    <!-- Mid arm -->
+    <path d="M 99 355 C 115 352, 135 350, 150 354 C 155 356, 152 363, 145 365 C 130 368, 115 368, 101 369 Z" stroke-width="2" />
+    <!-- Bottom sweeping arm -->
+    <path d="M 96 395 C 120 395, 150 392, 175 400 C 182 402, 178 412, 168 414 C 142 418, 115 418, 95 414 Z" stroke-width="3" />
+
+    <!-- Letter 'T' / ligature -->
+    <!-- Crossbar -->
+    <path d="M 132 408 C 155 405, 185 402, 210 408 C 215 410, 212 418, 204 420 C 180 424, 155 424, 135 423 Z" stroke-width="2" />
+    <!-- Downstroke with tail -->
+    <path d="M 170 415 C 176 415, 178 425, 176 440 C 172 462, 160 480, 148 488 C 142 492, 138 486, 142 480 C 152 465, 160 445, 162 425 C 162 418, 165 415, 170 415 Z" stroke-width="3" />
+    <!-- Flourish tail / knot -->
+    <path d="M 172 445 C 185 440, 202 442, 212 452 C 216 456, 212 462, 205 460 C 195 456, 182 455, 170 458 Z" stroke-width="2" />
+  </g>
+
+  <!-- Cambodian Apsara Goddess in Khmer Crown (Center / Right) -->
+  <g fill="#1A1A1A" stroke="#1A1A1A" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Intricate Khmer Mokot (Tiered Royal Crown) -->
+    <!-- Central pinnacle spire -->
+    <path d="M 292 75 Q 295 95 293 118 Q 290 95 292 75 Z" />
+    <path d="M 292 75 L 290 120 L 294 120 Z" />
+    <circle cx="292" cy="74" r="2.5" />
+    <!-- Side flame spires (Kbach Phni Tes) -->
+    <path d="M 275 92 Q 282 108 285 125 Q 278 112 275 92 Z" />
+    <path d="M 315 88 Q 310 108 304 125 Q 312 108 315 88 Z" />
+    <path d="M 260 115 Q 270 128 278 140 Q 268 132 260 115 Z" />
+    <path d="M 335 110 Q 325 128 316 142 Q 330 128 335 110 Z" />
+
+    <!-- Tiered crown structural bands & jewels -->
+    <path d="M 268 132 Q 292 125 320 130" fill="none" stroke-width="3.5" />
+    <path d="M 262 145 Q 292 136 328 142" fill="none" stroke-width="3" />
+    <path d="M 256 160 Q 290 150 334 158" fill="none" stroke-width="3.5" />
+
+    <!-- Crown ornate filigree details (intricate triangular kbach petals) -->
+    <polygon points="274,130 279,122 284,130" />
+    <polygon points="286,128 292,118 298,128" />
+    <polygon points="300,128 306,120 312,130" />
+    <polygon points="266,145 272,136 278,144" />
+    <polygon points="280,143 288,132 296,143" />
+    <polygon points="298,143 306,133 314,144" />
+    <polygon points="316,144 322,136 328,145" />
+
+    <!-- Forehead diadem band with embedded jewels -->
+    <path d="M 254 175 C 275 168, 305 168, 335 178 C 330 186, 298 178, 254 186 Z" />
+    <circle cx="270" cy="178" r="2.2" fill="#FFFFFF" />
+    <circle cx="285" cy="175" r="2.5" fill="#FFFFFF" />
+    <circle cx="300" cy="176" r="2.5" fill="#FFFFFF" />
+    <circle cx="315" cy="179" r="2.2" fill="#FFFFFF" />
+
+    <!-- Hairline and Apsara Chignon / Flowing Tresses -->
+    <path d="M 335 178 C 352 195, 368 220, 362 250 C 358 270, 345 285, 350 310 C 355 335, 375 365, 365 390 C 358 408, 345 395, 340 375 C 335 350, 340 325, 332 300 C 326 280, 318 268, 324 245 C 328 228, 332 205, 335 178 Z" />
+    <!-- Fine hair lines -->
+    <path d="M 345 220 Q 360 255 348 290" fill="none" stroke-width="1.8" />
+    <path d="M 352 240 Q 366 280 354 320" fill="none" stroke-width="1.5" />
+
+    <!-- Graceful Apsara Face Profile -->
+    <!-- Forehead, nose, lips, chin, jawline -->
+    <path d="M 258 185 C 255 198, 254 212, 252 222 C 254 225, 260 227, 260 230 C 256 233, 252 235, 254 238 C 258 240, 262 241, 261 244 C 256 246, 251 247, 253 252 C 256 258, 264 266, 275 272 C 290 280, 305 280, 316 268 C 322 260, 325 248, 325 235" fill="none" stroke-width="2.5" />
+
+    <!-- Arched Eyebrow -->
+    <path d="M 256 215 Q 268 208 280 216" fill="none" stroke-width="2.6" />
+    <!-- Almond Eye & Eyelash -->
+    <path d="M 260 224 Q 270 218 280 224" fill="none" stroke-width="2.2" />
+    <path d="M 262 225 Q 271 229 279 224" fill="none" stroke-width="1.2" />
+    <circle cx="270" cy="224" r="2.2" />
+
+    <!-- Serene Smile -->
+    <path d="M 258 244 Q 268 244 274 240" fill="none" stroke-width="1.8" />
+
+    <!-- Ear & Traditional Kundala Ear Pendant -->
+    <path d="M 314 225 C 320 222, 325 228, 324 238 C 322 245, 318 250, 315 252" fill="none" stroke-width="2" />
+    <circle cx="316" cy="254" r="2.5" />
+    <path d="M 316 257 L 314 275 L 318 275 Z" />
+    <circle cx="316" cy="278" r="2" />
+
+    <!-- Neck & Throat Curves -->
+    <path d="M 276 273 C 278 290, 280 308, 282 322" fill="none" stroke-width="2.2" />
+    <path d="M 312 268 C 314 285, 316 302, 318 318" fill="none" stroke-width="2.2" />
+
+    <!-- Royal Ornate Necklace (Srang-Ko) -->
+    <path d="M 278 315 C 295 328, 315 326, 332 312" fill="none" stroke-width="3" />
+    <path d="M 270 330 C 295 348, 325 344, 345 325" fill="none" stroke-width="2.2" />
+    <!-- Droplet pendants on necklace -->
+    <polygon points="282,324 285,334 288,324" />
+    <polygon points="292,327 296,338 300,327" />
+    <polygon points="304,328 308,340 312,328" />
+    <polygon points="316,326 320,337 324,326" />
+    <polygon points="328,322 331,332 334,322" />
+
+    <!-- Shoulder, Torso, and Armlet (Kayura) -->
+    <path d="M 268 335 C 255 352, 248 375, 245 405" fill="none" stroke-width="2.4" />
+    <path d="M 342 325 C 362 342, 375 365, 385 395" fill="none" stroke-width="2.2" />
+    <!-- Armlet jewellery -->
+    <path d="M 358 355 C 368 358, 380 354, 386 348" fill="none" stroke-width="3" />
+    <circle cx="372" cy="354" r="3" />
+  </g>
+
+  <!-- Red Lotus Blossom (Blooming at the base / bottom) -->
+  <g fill="#BA1C1C" stroke="#BA1C1C" stroke-linejoin="round" stroke-linecap="round">
+    <!-- Center dominant lotus petal -->
+    <path d="M 330 330 C 330 330, 365 375, 362 425 C 345 408, 330 380, 325 350 Z" />
+    <!-- Left upward sweeping petals -->
+    <path d="M 320 345 C 310 375, 280 405, 235 415 C 265 395, 295 375, 310 350 Z" />
+    <path d="M 298 370 C 275 398, 235 425, 195 432 C 230 415, 268 395, 288 375 Z" />
+    <!-- Base spread petals -->
+    <path d="M 315 390 C 290 425, 245 450, 205 458 C 248 445, 285 422, 305 395 Z" />
+    <path d="M 335 370 C 352 405, 370 435, 405 448 C 375 430, 355 405, 342 375 Z" />
+    <!-- Inner flower calyx & shading strokes -->
+    <path d="M 285 415 Q 310 400 330 380" fill="none" stroke="#FFFFFF" stroke-width="2.5" />
+    <path d="M 255 432 Q 285 415 310 398" fill="none" stroke="#FFFFFF" stroke-width="2" />
+    <path d="M 330 390 Q 355 410 380 428" fill="none" stroke="#FFFFFF" stroke-width="2" />
+  </g>
+
+  <!-- Traditional Red Seal Stamp / Chop (Bottom-Right: "Mini Mart") -->
+  <g transform="translate(415, 415)" filter="url(#softGlow)">
+    <!-- Rounded seal frame with stamp-like texture -->
+    <rect x="0" y="0" width="68" height="68" rx="10" ry="10" fill="none" stroke="#B81D24" stroke-width="4.5" />
+    <!-- Inner border hairline -->
+    <rect x="3.5" y="3.5" width="61" height="61" rx="7" ry="7" fill="none" stroke="#B81D24" stroke-width="1.2" opacity="0.6" />
+    <!-- Seal Text -->
+    <text x="34" y="29" font-family="'Georgia', 'Times New Roman', serif" font-size="18" font-weight="900" fill="#B81D24" text-anchor="middle" letter-spacing="0.5">Mini</text>
+    <text x="34" y="52" font-family="'Georgia', 'Times New Roman', serif" font-size="18" font-weight="900" fill="#B81D24" text-anchor="middle" letter-spacing="0.5">Mart</text>
+  </g>
+</svg>

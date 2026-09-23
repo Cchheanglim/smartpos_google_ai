@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Operational Tasks{% endblock %}
+{% block page_title %}Staff Operational Tasks & Duties{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+  <div>
+    <p style="font-size:0.875rem; color:var(--text-muted);">
+      Store checklists, restocking assignments, and shift handovers.
+    </p>
+  </div>
+  <button type="button" class="btn btn-primary" onclick="openModal('addTaskModal')">
+    <i class="fa-solid fa-plus"></i> Assign Task
+  </button>
+</div>
+
+<div class="card-table">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Task Title</th>
+        <th>Assigned To</th>
+        <th>Priority</th>
+        <th>Status</th>
+        <th>Due Date</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in tasks %}
+      <tr>
+        <td>
+          <div style="font-weight:600; color:var(--text-main);">{{ t.title }}</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">{{ t.description }}</div>
+        </td>
+        <td>{{ t.assignee_name }}</td>
+        <td>
+          {% if t.priority == 'urgent' %}
+            <span class="badge" style="background:#FEE2E2; color:#991B1B; font-weight:700;">URGENT</span>
+          {% elif t.priority == 'high' %}
+            <span class="badge" style="background:#FEF3C7; color:#B45309; font-weight:600;">HIGH</span>
+          {% else %}
+            <span class="badge" style="background:#F1F5F9;">{{ t.priority|upper }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if t.status == 'completed' %}
+            <span class="badge" style="background:#D1FAE5; color:#065F46;">Completed</span>
+          {% elif t.status == 'in_progress' %}
+            <span class="badge" style="background:#E0F2FE; color:#0369A1;">In Progress</span>
+          {% else %}
+            <span class="badge" style="background:#F1F5F9;">Pending</span>
+          {% endif %}
+        </td>
+        <td style="font-size:0.8rem; color:var(--text-muted);">{{ t.due_date or '-' }}</td>
+        <td>
+          <form action="{{ url_for('tasks.update_status', task_id=t.id) }}" method="POST" style="display:flex; gap:0.4rem; margin:0;">
+            <select name="status" class="form-control" style="padding:0.25rem 0.5rem; font-size:0.8rem; width:120px;">
+              <option value="pending" {% if t.status == 'pending' %}selected{% endif %}>Pending</option>
+              <option value="in_progress" {% if t.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+              <option value="completed" {% if t.status == 'completed' %}selected{% endif %}>Completed</option>
+            </select>
+            <button type="submit" class="btn btn-secondary btn-sm" style="padding:0.25rem 0.5rem; font-size:0.75rem;">Update</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" style="text-align:center; padding:2rem; color:var(--text-subtle);">No active tasks found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal-backdrop" id="addTaskModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 style="font-weight:700;"><i class="fa-solid fa-list-check" style="color:var(--primary);"></i> Assign New Duty</h3>
+      <button type="button" onclick="closeModal('addTaskModal')" style="background:none;border:none;font-size:1.1rem;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form action="{{ url_for('tasks.add_task') }}" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Task Title</label>
+          <input type="text" name="title" class="form-control" placeholder="e.g. Restock Beverage Cooler Shelf" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description / Instructions</label>
+          <textarea name="description" class="form-control" rows="2" placeholder="Specific notes or checklists"></textarea>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <div class="form-group">
+            <label class="form-label">Assign To</label>
+            <select name="assigned_to" class="form-control" required>
+              {% for s in staff_members %}
+                <option value="{{ s.id }}">{{ s.name }} ({{ s.role_name }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Priority</label>
+            <select name="priority" class="form-control">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Due Date</label>
+          <input type="date" name="due_date" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addTaskModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Assign Task</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

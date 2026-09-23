@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Dashboard{% endblock %} - SmartPOS Mini-Mart</title>
+  
+  <!-- FontAwesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <!-- Ambient Gradient Background Blobs -->
+  <div class="ambient-blobs">
+    <div class="blob-1"></div>
+    <div class="blob-2"></div>
+  </div>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="app-sidebar">
+      <div class="sidebar-header">
+        <a href="{{ url_for('dashboard.index') }}" class="brand-logo">
+          <div class="brand-icon">
+            <i class="fa-solid fa-store"></i>
+          </div>
+          <span>SmartPOS<span class="brand-badge">PRO</span></span>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Main Operations</div>
+        <a href="{{ url_for('dashboard.index') }}" class="nav-item {% if request.path == '/' or request.path == '/dashboard' %}active{% endif %}">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('pos.index') }}" class="nav-item {% if request.path.startswith('/pos') %}active{% endif %}">
+          <i class="fa-solid fa-cash-register"></i>
+          <span>POS Register</span>
+        </a>
+        <a href="{{ url_for('sales.history') }}" class="nav-item {% if request.path.startswith('/sales') %}active{% endif %}">
+          <i class="fa-solid fa-receipt"></i>
+          <span>Sales & Refunds</span>
+        </a>
+
+        <div class="nav-section-title">Inventory & Catalog</div>
+        <a href="{{ url_for('products.index') }}" class="nav-item {% if request.path == '/products/' or request.path == '/products' %}active{% endif %}">
+          <i class="fa-solid fa-boxes-stacked"></i>
+          <span>Inventory Products</span>
+        </a>
+        <a href="{{ url_for('products.barcodes') }}" class="nav-item {% if request.path.startswith('/products/barcodes') %}active{% endif %}">
+          <i class="fa-solid fa-barcode"></i>
+          <span>Barcode Labels</span>
+        </a>
+
+        <div class="nav-section-title">Management</div>
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('staff.index') }}" class="nav-item {% if request.path == '/staff/' or request.path == '/staff' %}active{% endif %}">
+          <i class="fa-solid fa-users"></i>
+          <span>Staff & Shifts</span>
+        </a>
+        <a href="{{ url_for('staff.roles_matrix') }}" class="nav-item {% if request.path.startswith('/staff/roles-matrix') %}active{% endif %}">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>RBAC Matrix</span>
+        </a>
+        <a href="{{ url_for('reports.index') }}" class="nav-item {% if request.path.startswith('/reports') %}active{% endif %}">
+          <i class="fa-solid fa-chart-line"></i>
+          <span>Financial Reports</span>
+        </a>
+        {% endif %}
+        <a href="{{ url_for('tasks.index') }}" class="nav-item {% if request.path.startswith('/tasks') %}active{% endif %}">
+          <i class="fa-solid fa-list-check"></i>
+          <span>Operational Tasks</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="{{ url_for('auth.profile') }}" class="user-card-mini">
+          <img src="{{ url_for('static', filename='uploads/avatars/' + (current_user.profile_picture or 'f86e67858910489ba513eae41ad5b941.png')) }}" alt="Avatar">
+          <div style="flex:1; overflow:hidden;">
+            <div style="font-weight:600; font-size:0.85rem; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">{{ current_user.name }}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); text-transform:capitalize;">{{ current_user.role_name.replace('_', ' ') }}</div>
+          </div>
+          <form action="{{ url_for('auth.logout') }}" method="POST" style="margin:0;">
+            <button type="submit" style="background:none; border:none; color:var(--text-subtle); cursor:pointer; padding:4px;" title="Sign Out">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            </button>
+          </form>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content Wrapper -->
+    <div class="main-wrapper">
+      <!-- Top Navigation Header -->
+      <header class="top-header">
+        <div style="display:flex; align-items:center; gap:1.5rem;">
+          <h2 style="font-size:1.25rem; font-weight:700;">{% block page_title %}Overview{% endblock %}</h2>
+        </div>
+
+        <div class="header-actions">
+          <!-- Dual Currency Indicator -->
+          <div class="rate-badge">
+            <i class="fa-solid fa-coins khr-flag"></i>
+            <span>Exchange: $1 = {{ khr_rate|int }} ៛</span>
+          </div>
+
+          <!-- Shift Status Quick Actions -->
+          <button type="button" class="btn btn-secondary" onclick="openModal('shiftModal')">
+            <i class="fa-solid fa-clock"></i>
+            <span>Punch Clock</span>
+          </button>
+
+          {% if not request.path.startswith('/pos') %}
+          <a href="{{ url_for('pos.index') }}" class="btn btn-primary">
+            <i class="fa-solid fa-cart-shopping"></i>
+            <span>Open Register</span>
+          </a>
+          {% endif %}
+        </div>
+      </header>
+
+      <!-- Flash Notification Container -->
+      <div class="flash-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <i class="fa-solid {% if category == 'success' %}fa-circle-check{% elif category == 'error' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+                  <span>{{ message }}</span>
+                </div>
+                <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:inherit;cursor:pointer;">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+      </div>
+
+      <!-- Page Specific Content -->
+      <main class="page-body">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <!-- Global Shift Punch Clock Modal -->
+  <div class="modal-backdrop" id="shiftModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 style="font-weight:700;"><i class="fa-solid fa-clock" style="color:var(--primary);"></i> Staff Shift Punch Clock</h3>
+        <button type="button" onclick="closeModal('shiftModal')" style="background:none;border:none;font-size:1.1rem;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <!-- Clock In Form -->
+          <form action="{{ url_for('staff.clock_in') }}" method="POST" style="background:#F8FAFC; padding:1.25rem; border-radius:var(--radius-md); border:1px solid var(--border-color);">
+            <h4 style="font-weight:700; margin-bottom:0.75rem; color:#065F46;"><i class="fa-solid fa-right-to-bracket"></i> Clock In</h4>
+            <div class="form-group">
+              <label class="form-label">Starting Cash Float ($ USD)</label>
+              <input type="number" step="0.01" name="starting_cash" class="form-control" value="100.00" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Opening Notes</label>
+              <input type="text" name="notes" class="form-control" placeholder="Drawer float counted">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Start Shift</button>
+          </form>
+
+          <!-- Clock Out Form -->
+          <form action="{{ url_for('staff.clock_out') }}" method="POST" style="background:#F8FAFC; padding:1.25rem; border-radius:var(--radius-md); border:1px solid var(--border-color);">
+            <h4 style="font-weight:700; margin-bottom:0.75rem; color:#991B1B;"><i class="fa-solid fa-right-from-bracket"></i> Clock Out</h4>
+            <div class="form-group">
+              <label class="form-label">Ending Drawer Cash ($ USD)</label>
+              <input type="number" step="0.01" name="counted_cash" class="form-control" placeholder="Count physical cash" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Shift Reconciliation Notes</label>
+              <input type="text" name="notes" class="form-control" placeholder="Handed over to next shift">
+            </div>
+            <button type="submit" class="btn btn-danger btn-block">End Shift</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

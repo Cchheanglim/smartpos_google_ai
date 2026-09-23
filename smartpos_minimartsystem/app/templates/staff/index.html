@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Staff & Shifts{% endblock %}
+{% block page_title %}Staff Employees & Work Shifts{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+  <div>
+    <p style="font-size:0.875rem; color:var(--text-muted);">
+      Manage employee accounts, assign work shifts, track punch clock records.
+    </p>
+  </div>
+  <div style="display:flex; gap:0.75rem;">
+    <a href="{{ url_for('staff.roles_matrix') }}" class="btn btn-secondary">
+      <i class="fa-solid fa-shield-halved"></i> RBAC Matrix
+    </a>
+    <button type="button" class="btn btn-primary" onclick="openModal('addStaffModal')">
+      <i class="fa-solid fa-user-plus"></i> Add Employee
+    </button>
+  </div>
+</div>
+
+<!-- Staff Directory Cards -->
+<div class="card-table" style="margin-bottom:2rem;">
+  <div class="table-header-bar">
+    <h3 style="font-size:1rem; font-weight:700;">Employee Directory ({{ staff_members|length }})</h3>
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Employee</th>
+        <th>System Role</th>
+        <th>Shift</th>
+        <th>Phone</th>
+        <th>Active Status</th>
+        <th>Role Assignment</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in staff_members %}
+      <tr>
+        <td>
+          <div style="display:flex; align-items:center; gap:0.75rem;">
+            <img src="{{ url_for('static', filename='uploads/avatars/' + (s.profile_picture or 'f86e67858910489ba513eae41ad5b941.png')) }}" style="width:38px; height:38px; border-radius:50%; object-fit:cover;">
+            <div>
+              <div style="font-weight:600;">{{ s.name }}</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">{{ s.email }}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <span class="badge badge-vip">
+            {{ s.role_name.replace('_', ' ')|upper }}
+          </span>
+        </td>
+        <td>
+          <span class="badge" style="background:#F1F5F9;">
+            <i class="fa-regular fa-clock"></i> {{ s.shift_name }} ({{ s.shift_start[:5] }} - {{ s.shift_end[:5] }})
+          </span>
+        </td>
+        <td>{{ s.phone or '-' }}</td>
+        <td>
+          {% if s.is_active %}
+            <span class="badge" style="background:#D1FAE5; color:#065F46;">Active</span>
+          {% else %}
+            <span class="badge" style="background:#FEE2E2; color:#991B1B;">Inactive</span>
+          {% endif %}
+        </td>
+        <td>
+          <form action="{{ url_for('staff.update_role', user_id=s.id) }}" method="POST" style="display:flex; gap:0.4rem; align-items:center; margin:0;">
+            <select name="role_id" class="form-control" style="padding:0.25rem 0.5rem; font-size:0.8rem; width:130px;">
+              {% for r in roles %}
+                <option value="{{ r.id }}" {% if r.id == s.role_id %}selected{% endif %}>{{ r.display_name }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-secondary btn-sm" style="padding:0.25rem 0.5rem; font-size:0.75rem;">Set</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Attendance Shift Logs -->
+<div class="card-table">
+  <div class="table-header-bar">
+    <div>
+      <h3 style="font-size:1rem; font-weight:700;">Shift Punch Clock & Register Reconciliation</h3>
+      <p style="font-size:0.8rem; color:var(--text-muted);">Starting drawer cash vs closing physical count audit</p>
+    </div>
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Staff Member</th>
+        <th>Clock In</th>
+        <th>Clock Out</th>
+        <th>Starting Float</th>
+        <th>Counted Cash</th>
+        <th>Discrepancy</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in attendance_records %}
+      <tr>
+        <td style="font-weight:600;">{{ a.user_name }}</td>
+        <td style="font-size:0.8rem;">{{ a.clock_in.strftime('%Y-%m-%d %H:%M') if a.clock_in else '-' }}</td>
+        <td style="font-size:0.8rem;">
+          {% if a.clock_out %}
+            {{ a.clock_out.strftime('%Y-%m-%d %H:%M') }}
+          {% else %}
+            <span class="badge" style="background:#D1FAE5; color:#065F46;">On Shift</span>
+          {% endif %}
+        </td>
+        <td>${{ "%.2f"|format(a.starting_cash) }}</td>
+        <td>
+          {% if a.counted_cash is not none %}
+            ${{ "%.2f"|format(a.counted_cash) }}
+          {% else %}
+            <span style="color:var(--text-subtle);">-</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if a.counted_cash is not none %}
+            <span style="font-weight:700; color:{% if a.cash_discrepancy == 0 %}#059669{% else %}#DC2626{% endif %};">
+              ${{ "%.2f"|format(a.cash_discrepancy) }}
+            </span>
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td style="font-size:0.8rem; color:var(--text-muted);">{{ a.notes }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" style="text-align:center; padding:1.5rem; color:var(--text-subtle);">No shift records found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Add Staff Modal -->
+<div class="modal-backdrop" id="addStaffModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 style="font-weight:700;"><i class="fa-solid fa-user-plus" style="color:var(--primary);"></i> Add Staff Member</h3>
+      <button type="button" onclick="closeModal('addStaffModal')" style="background:none;border:none;font-size:1.1rem;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form action="{{ url_for('staff.add_staff') }}" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" name="name" class="form-control" placeholder="e.g. Sreysros Chan" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address (Login)</label>
+          <input type="email" name="email" class="form-control" placeholder="e.g. sreysros@smartpos.local" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Initial Password</label>
+          <input type="password" name="password" class="form-control" value="password123" required>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <div class="form-group">
+            <label class="form-label">Role</label>
+            <select name="role_id" class="form-control" required>
+              {% for r in roles %}
+                <option value="{{ r.id }}">{{ r.display_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Shift</label>
+            <select name="shift_name" class="form-control">
+              <option value="Morning">Morning (06:00 - 14:00)</option>
+              <option value="Afternoon">Afternoon (14:00 - 22:00)</option>
+              <option value="Night">Night (22:00 - 06:00)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addStaffModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Employee</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

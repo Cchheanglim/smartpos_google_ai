@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Store Dashboard{% endblock %}
+{% block page_title %}Dashboard & Store Analytics{% endblock %}
+
+{% block content %}
+<!-- KPI Metrics Grid -->
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="metric-icon icon-purple">
+      <i class="fa-solid fa-sack-dollar"></i>
+    </div>
+    <div class="metric-content">
+      <h3>Total Sales Revenue</h3>
+      <div class="metric-value">{{ metrics.total_revenue|currency_usd }}</div>
+      <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+        Equivalent to <strong style="color:var(--primary);">{{ metrics.total_revenue|currency_khr }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-icon icon-emerald">
+      <i class="fa-solid fa-receipt"></i>
+    </div>
+    <div class="metric-content">
+      <h3>Completed Orders</h3>
+      <div class="metric-value">{{ metrics.total_orders }}</div>
+      <div style="font-size:0.75rem; color:#059669; margin-top:2px;">
+        <i class="fa-solid fa-arrow-trend-up"></i> Gross Profit: {{ metrics.gross_profit|currency_usd }} ({{ metrics.profit_margin }}%)
+      </div>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-icon icon-amber">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+    </div>
+    <div class="metric-content">
+      <h3>Low Stock Warnings</h3>
+      <div class="metric-value" style="color: {% if metrics.low_stock_count > 0 %}#D97706{% else %}inherit{% endif %};">
+        {{ metrics.low_stock_count }}
+      </div>
+      <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+        Across {{ metrics.total_products }} active inventory products
+      </div>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-icon icon-lime">
+      <i class="fa-solid fa-user-check"></i>
+    </div>
+    <div class="metric-content">
+      <h3>Staff Members</h3>
+      <div class="metric-value">{{ metrics.active_staff }}</div>
+      <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+        Active work shifts & attendance
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Split: Recent Sales & Top Products -->
+<div style="display:grid; grid-template-columns: 2fr 1fr; gap:1.5rem; margin-bottom: 2rem;">
+  <!-- Recent Transactions Card -->
+  <div class="card-table">
+    <div class="table-header-bar">
+      <div>
+        <h3 style="font-size:1rem; font-weight:700;">Recent Sales Transactions</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted);">Real-time checkout order feed</p>
+      </div>
+      <a href="{{ url_for('sales.history') }}" class="btn btn-secondary btn-sm" style="font-size:0.8rem; padding:0.4rem 0.85rem;">
+        View All Ledger
+      </a>
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Receipt #</th>
+          <th>Cashier</th>
+          <th>Customer</th>
+          <th>Payment</th>
+          <th>Total (USD)</th>
+          <th>Total (KHR)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sale in recent_sales %}
+        <tr>
+          <td style="font-weight:600; font-family:monospace; color:var(--primary);">
+            {{ sale.transaction_code }}
+          </td>
+          <td>{{ sale.cashier_name }}</td>
+          <td>
+            {% if sale.customer_name %}
+              <span class="badge badge-vip">{{ sale.customer_name }}</span>
+            {% else %}
+              <span style="color:var(--text-subtle);">Walk-in</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge" style="background:#F1F5F9; color:var(--text-main);">
+              {{ sale.payment.method }}
+            </span>
+          </td>
+          <td style="font-weight:700;">{{ sale.total_amount|currency_usd }}</td>
+          <td style="color:var(--text-muted); font-size:0.8rem;">{{ sale.total_khr }} ៛</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align:center; padding:2rem; color:var(--text-subtle);">
+            No sales recorded yet. Open register to process first order!
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Top Selling Products Card -->
+  <div class="card-table">
+    <div class="table-header-bar">
+      <div>
+        <h3 style="font-size:1rem; font-weight:700;">Top Selling Items</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted);">Best volume performers</p>
+      </div>
+      <i class="fa-solid fa-fire" style="color:#EF4444;"></i>
+    </div>
+
+    <div style="padding:1rem; display:flex; flex-direction:column; gap:0.75rem;">
+      {% for prod in top_products %}
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:0.6rem 0.85rem; background:#F8FAFC; border-radius:var(--radius-md); border:1px solid var(--border-color);">
+        <div style="overflow:hidden; margin-right:0.5rem;">
+          <div style="font-weight:600; font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            {{ prod.product_name }}
+          </div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">
+            SKU: {{ prod.sku }}
+          </div>
+        </div>
+        <div style="text-align:right; min-width:70px;">
+          <div style="font-weight:700; color:var(--primary); font-size:0.9rem;">
+            ${{ "%.2f"|format(prod.total_sales_volume) }}
+          </div>
+          <div style="font-size:0.75rem; color:#059669; font-weight:600;">
+            {{ prod.total_units_sold }} sold
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div style="text-align:center; padding:1.5rem; color:var(--text-subtle); font-size:0.85rem;">
+        No sales data available yet.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Low Stock Alerts Section if any -->
+{% if low_stock_items %}
+<div class="card-table" style="border-left: 4px solid var(--warning);">
+  <div class="table-header-bar" style="background:#FFFBEB;">
+    <div style="display:flex; align-items:center; gap:0.6rem;">
+      <i class="fa-solid fa-triangle-exclamation" style="color:#D97706; font-size:1.1rem;"></i>
+      <h3 style="font-size:0.95rem; font-weight:700; color:#92400E;">Inventory Replenishment Warnings (Threshold Reached)</h3>
+    </div>
+    <a href="{{ url_for('products.index') }}" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:0.35rem 0.75rem;">
+      Adjust Stock
+    </a>
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Product Name</th>
+        <th>Category</th>
+        <th>Remaining On-Hand</th>
+        <th>Restock Threshold</th>
+        <th>Unit Cost</th>
+        <th>Selling Price</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in low_stock_items %}
+      <tr>
+        <td style="font-weight:600;">{{ p.name }}</td>
+        <td><span class="badge" style="background:#F1F5F9;">{{ p.category_name }}</span></td>
+        <td>
+          <span class="badge badge-bronze" style="font-weight:700;">
+            {{ p.quantity_in_stock }} {{ p.unit }}s remaining
+          </span>
+        </td>
+        <td>{{ p.low_stock_threshold }} {{ p.unit }}s</td>
+        <td>{{ p.cost_price|currency_usd }}</td>
+        <td style="font-weight:700; color:var(--primary);">{{ p.price|currency_usd }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

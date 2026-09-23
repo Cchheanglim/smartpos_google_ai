@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Barcode Label Sheets{% endblock %}
+{% block page_title %}Printable Shelf-Edge Barcode Labels{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;" class="no-print">
+  <div>
+    <p style="font-size:0.875rem; color:var(--text-muted);">
+      Ready-to-print 38mm x 25mm retail shelf tags and barcode stickers.
+    </p>
+  </div>
+  <button type="button" class="btn btn-primary" onclick="window.print()">
+    <i class="fa-solid fa-print"></i> Print Barcode Sheet
+  </button>
+</div>
+
+<style>
+  .barcode-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+  .barcode-label-card {
+    background: #fff;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .barcode-bars {
+    font-family: monospace;
+    letter-spacing: 3px;
+    font-size: 1.4rem;
+    font-weight: 900;
+    margin: 0.5rem 0 0.25rem;
+    color: #000;
+    line-height: 1;
+  }
+  @media print {
+    .no-print, .app-sidebar, .top-header, .ambient-blobs {
+      display: none !important;
+    }
+    .main-wrapper {
+      margin-left: 0 !important;
+    }
+    .barcode-grid {
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 15px !important;
+    }
+    .barcode-label-card {
+      border: 1px solid #ccc !important;
+      page-break-inside: avoid;
+    }
+  }
+</style>
+
+<div class="barcode-grid">
+  {% for p in products %}
+  <div class="barcode-label-card">
+    <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">SmartPOS Mini-Mart</div>
+    <div style="font-weight:700; font-size:0.9rem; margin:0.25rem 0; color:var(--text-main); line-height:1.2;">
+      {{ p.name }}
+    </div>
+    <div style="display:flex; justify-content:center; align-items:center; gap:0.5rem; margin:0.35rem 0;">
+      <span style="font-size:1.15rem; font-weight:800; color:var(--primary);">${{ "%.2f"|format(p.price) }}</span>
+      <span style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">({{ p.price_khr(khr_rate)|int }} ៛)</span>
+    </div>
+    <!-- Clean barcode representation -->
+    <div class="barcode-bars">||| | || ||| || |||</div>
+    <div style="font-family:monospace; font-size:0.75rem; font-weight:600; color:#333;">
+      {{ p.barcode }}
+    </div>
+    <div style="font-size:0.65rem; color:var(--text-subtle); margin-top:2px;">SKU: {{ p.sku }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

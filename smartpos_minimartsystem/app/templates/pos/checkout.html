@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}POS Register Terminal{% endblock %}
+{% block page_title %}Cashier POS Register{% endblock %}
+
+{% block extra_head %}
+<script>
+  window.POS_CONFIG = {
+    exchangeRate: {{ exchange_rate|float }},
+    taxPercent: {{ tax_percent|float }}
+  };
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="pos-layout" id="posContainer">
+  <!-- Left Side: Catalog, Search, and Products -->
+  <div class="pos-catalog-panel">
+    <!-- Search Bar & Barcode Scanner Input -->
+    <div style="display:flex; gap:0.75rem; margin-bottom:1rem;">
+      <div style="position:relative; flex:1;">
+        <i class="fa-solid fa-barcode" style="position:absolute; left:1rem; top:50%; transform:translateY(-50%); color:var(--text-subtle); font-size:1.1rem;"></i>
+        <input type="text" id="posSearchInput" class="form-control" style="padding-left:2.6rem; border-radius:var(--radius-full);" placeholder="Scan barcode with scanner or search product name / SKU (Press Enter)..." autofocus>
+      </div>
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('posSearchInput').focus()">
+        <i class="fa-solid fa-magnifying-glass"></i>
+      </button>
+    </div>
+
+    <!-- Category Filter Pills -->
+    <div class="category-pills">
+      <button type="button" class="category-pill active" data-category-id="all">
+        <i class="fa-solid fa-layer-group"></i>
+        <span>All Items</span>
+      </button>
+      {% for cat in categories %}
+      <button type="button" class="category-pill" data-category-id="{{ cat.id }}">
+        <i class="fa-solid {{ cat.icon }}"></i>
+        <span>{{ cat.name }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    <!-- Product Cards Grid -->
+    <div class="product-grid" id="productGrid">
+      {% for p in products %}
+      <div class="product-card" 
+           data-product-id="{{ p.id }}" 
+           data-category-id="{{ p.category_id }}"
+           data-name="{{ p.name }}"
+           data-sku="{{ p.sku }}"
+           data-barcode="{{ p.barcode }}"
+           data-price="{{ p.price }}"
+           data-stock="{{ p.quantity_in_stock }}">
+        <div class="product-image">
+          {% if p.image_url %}
+            <img src="{{ url_for('static', filename='uploads/products/' + p.image_url) }}" alt="{{ p.name }}">
+          {% else %}
+            <i class="fa-solid fa-box"></i>
+          {% endif %}
+        </div>
+        <div class="product-name" title="{{ p.name }}">{{ p.name }}</div>
+        <div class="product-meta">
+          <div>
+            <div class="product-price">${{ "%.2f"|format(p.price) }}</div>
+            <div class="product-khr">{{ p.price_khr(exchange_rate)|int }} ៛</div>
+          </div>
+          <span class="product-stock {% if p.is_low_stock %}stock-low{% else %}stock-in{% endif %}">
+            {{ p.quantity_in_stock }} left
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Right Side: Order Summary Cart Panel -->
+  <div class="pos-cart-panel">
+    <!-- Cart Header with Customer Loyalty Lookup -->
+    <div class="cart-header">
+      <div>
+        <h3 style="font-size:1rem; font-weight:700;">Current Ticket</h3>
+        <span style="font-size:0.75rem; color:var(--text-muted);" id="cartItemCount">0 items</span>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" id="clearCartBtn" style="padding:0.3rem 0.6rem; font-size:0.75rem; color:#EF4444;">
+        <i class="fa-solid fa-trash-can"></i> Clear
+      </button>
+    </div>
+
+    <!-- Loyalty Customer Bar -->
+    <div style="padding:0.75rem 1.25rem; background:#F8FAFC; border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between;">
+      <div id="selectedCustomerTag" style="display:flex; align-items:center; gap:0.5rem; overflow:hidden;">
+        <span style="font-size:0.8rem; color:var(--text-muted);">Walk-in Customer</span>
+      </div>
+      <button type="button" onclick="openModal('customerLookupModal')" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:0.25rem 0.6rem;">
+        <i class="fa-solid fa-id-card"></i> Lookup
+      </button>
+    </div>
+
+    <!-- Active Cart Items List -->
+    <div class="cart-items-list" id="cartList">
+      <!-- Dynamically populated by pos.js -->
+    </div>
+
+    <!-- Empty Cart State -->
+    <div id="cartEmpty" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-subtle); padding:2rem; text-align:center;">
+      <i class="fa-solid fa-basket-shopping" style="font-size:3rem; margin-bottom:0.75rem; opacity:0.5;"></i>
+      <div style="font-weight:600; font-size:0.95rem;">Cart is empty</div>
+      <div style="font-size:0.8rem;">Click products or scan barcode to add</div>
+    </div>
+
+    <!-- Order Summary & Checkout Action -->
+    <div class="cart-footer">
+      <div class="summary-row">
+        <span>Subtotal:</span>
+        <span id="subtotalVal" style="font-weight:600;">$0.00</span>
+      </div>
+      <div class="summary-row">
+        <span>Discount:</span>
+        <span id="discountVal" style="color:#059669; font-weight:600;">-$0.00</span>
+      </div>
+      <div class="summary-row">
+        <span>VAT Tax ({{ tax_percent|int }}%):</span>
+        <span id="taxVal" style="font-weight:600;">$0.00</span>
+      </div>
+      <div class="summary-row total-row">
+        <span>Total Due:</span>
+        <div style="text-align:right;">
+          <div id="totalUsdVal">$0.00</div>
+          <div class="total-khr-display" id="totalKhrVal">0 ៛</div>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-primary btn-block btn-lg" id="checkoutBtn" disabled style="margin-top:0.5rem;">
+        <i class="fa-solid fa-credit-card"></i>
+        <span>Pay & Complete Order</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Customer Lookup Modal -->
+<div class="modal-backdrop" id="customerLookupModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 style="font-weight:700;"><i class="fa-solid fa-id-card" style="color:var(--primary);"></i> Customer CRM Lookup</h3>
+      <button type="button" onclick="closeModal('customerLookupModal')" style="background:none;border:none;font-size:1.1rem;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Customer Mobile Phone Number</label>
+        <div style="display:flex; gap:0.5rem;">
+          <input type="tel" id="customerPhoneInput" class="form-control" placeholder="e.g. 012990011">
+          <button type="button" class="btn btn-primary" id="customerLookupBtn">Search</button>
+        </div>
+      </div>
+      <div style="margin-top:1rem; border-top:1px solid var(--border-color); padding-top:1rem;">
+        <div style="font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:0.5rem;">Quick Member Directory:</div>
+        <div style="display:flex; flex-direction:column; gap:0.4rem; max-height:180px; overflow-y:auto;">
+          {% for c in customers %}
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:0.5rem 0.75rem; background:#F8FAFC; border-radius:var(--radius-sm); border:1px solid var(--border-color); cursor:pointer;"
+               onclick="document.getElementById('customerPhoneInput').value='{{ c.phone }}'; document.getElementById('customerLookupBtn').click(); closeModal('customerLookupModal');">
+            <div>
+              <span style="font-weight:600; font-size:0.85rem;">{{ c.name }}</span>
+              <span style="font-size:0.75rem; color:var(--text-muted);">({{ c.phone }})</span>
+            </div>
+            <span class="badge badge-vip">{{ c.tier.label }} ({{ c.points }} pts)</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tender & Payment Modal -->
+<div class="modal-backdrop" id="paymentModal">
+  <div class="modal-box modal-lg">
+    <div class="modal-header">
+      <h3 style="font-weight:700;"><i class="fa-solid fa-cash-register" style="color:var(--primary);"></i> Finalize Checkout Tender</h3>
+      <button type="button" onclick="closeModal('paymentModal')" style="background:none;border:none;font-size:1.1rem;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <!-- Total Due Banner -->
+      <div style="background:linear-gradient(135deg, var(--primary), #9F58FF); color:#fff; border-radius:var(--radius-md); padding:1.25rem; display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+        <div>
+          <div style="font-size:0.8rem; text-transform:uppercase; letter-spacing:0.5px; opacity:0.9;">Total Amount Due</div>
+          <div style="font-size:2rem; font-weight:800;" id="paymentTotalUsd">$0.00</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.8rem; opacity:0.9;">In Cambodian Riel</div>
+          <div style="font-size:1.35rem; font-weight:700; color:var(--accent-lime);" id="paymentTotalKhr">0 ៛</div>
+        </div>
+      </div>
+
+      <!-- Tender Method Tabs -->
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:0.5rem; margin-bottom:1.5rem;">
+        <label style="border:1px solid var(--border-color); padding:0.75rem; border-radius:var(--radius-md); text-align:center; cursor:pointer;">
+          <input type="radio" name="payMethod" value="Cash" checked>
+          <div style="font-weight:600; margin-top:4px;"><i class="fa-solid fa-money-bill-wave" style="color:#10B981;"></i> Cash</div>
+        </label>
+        <label style="border:1px solid var(--border-color); padding:0.75rem; border-radius:var(--radius-md); text-align:center; cursor:pointer;">
+          <input type="radio" name="payMethod" value="KHQR">
+          <div style="font-weight:600; margin-top:4px;"><i class="fa-solid fa-qrcode" style="color:#EF4444;"></i> KHQR</div>
+        </label>
+        <label style="border:1px solid var(--border-color); padding:0.75rem; border-radius:var(--radius-md); text-align:center; cursor:pointer;">
+          <input type="radio" name="payMethod" value="Card">
+          <div style="font-weight:600; margin-top:4px;"><i class="fa-solid fa-credit-card" style="color:#0EA5E9;"></i> Card</div>
+        </label>
+        <label style="border:1px solid var(--border-color); padding:0.75rem; border-radius:var(--radius-md); text-align:center; cursor:pointer;">
+          <input type="radio" name="payMethod" value="Split">
+          <div style="font-weight:600; margin-top:4px;"><i class="fa-solid fa-arrows-split-up-and-left" style="color:#8B5CF6;"></i> Mixed</div>
+        </label>
+      </div>
+
+      <!-- Multi-currency Tender Inputs -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1.25rem;">
+        <div class="form-group">
+          <label class="form-label">Amount Paid ($ USD Notes)</label>
+          <input type="number" step="0.01" id="paidUsdInput" class="form-control" value="0.00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Amount Paid (៛ KHR Riels)</label>
+          <input type="number" step="100" id="paidKhrInput" class="form-control" value="0">
+        </div>
+      </div>
+
+      <!-- Change Display -->
+      <div style="background:#F8FAFC; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:1rem; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:0.8rem; color:var(--text-muted);">Change in USD:</div>
+          <div style="font-size:1.4rem; font-weight:700; color:#059669;" id="changeUsdVal">$0.00</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.8rem; color:var(--text-muted);">Change in KHR:</div>
+          <div style="font-size:1.4rem; font-weight:700; color:#059669;" id="changeKhrVal">0 ៛</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="closeModal('paymentModal')">Cancel</button>
+      <button type="button" class="btn btn-primary btn-lg" id="confirmPaymentBtn">
+        <i class="fa-solid fa-check"></i> Complete Sale
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Receipt Modal -->
+<div class="modal-backdrop" id="receiptModal">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-body">
+      <div class="receipt-printable" id="receiptContent">
+        <!-- Injected dynamically by pos.js -->
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button type="button" class="btn btn-secondary" onclick="closeModal('receiptModal')">Close</button>
+      <button type="button" class="btn btn-primary" onclick="window.print()">
+        <i class="fa-solid fa-print"></i> Print Receipt
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/pos.js') }}"></script>
+{% endblock %}

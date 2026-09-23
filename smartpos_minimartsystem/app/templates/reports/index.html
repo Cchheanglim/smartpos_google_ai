@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Financial Reports & Analytics{% endblock %}
+{% block page_title %}Financial Analytics & CRM Reports{% endblock %}
+
+{% block content %}
+<!-- Top Action Bar -->
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+  <div>
+    <p style="font-size:0.875rem; color:var(--text-muted);">
+      Gross profit margin analysis, sales breakdown, and customer loyalty retention.
+    </p>
+  </div>
+  <a href="{{ url_for('reports.export_csv') }}" class="btn btn-primary">
+    <i class="fa-solid fa-download"></i> Export Sales CSV
+  </a>
+</div>
+
+<!-- Financial KPI Cards -->
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="metric-icon icon-purple">
+      <i class="fa-solid fa-money-bill-trend-up"></i>
+    </div>
+    <div class="metric-content">
+      <h3>Gross Revenue</h3>
+      <div class="metric-value">{{ metrics.total_revenue|currency_usd }}</div>
+      <div style="font-size:0.75rem; color:var(--text-muted);">{{ metrics.total_revenue|currency_khr }}</div>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-icon icon-amber">
+      <i class="fa-solid fa-boxes-packing"></i>
+    </div>
+    <div class="metric-content">
+      <h3>Cost of Goods Sold (COGS)</h3>
+      <div class="metric-value">${{ "%.2f"|format(metrics.total_cogs) }}</div>
+      <div style="font-size:0.75rem; color:var(--text-muted);">Total inventory acquisition cost</div>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-icon icon-emerald">
+      <i class="fa-solid fa-chart-pie"></i>
+    </div>
+    <div class="metric-content">
+      <h3>Gross Profit</h3>
+      <div class="metric-value" style="color:#059669;">${{ "%.2f"|format(metrics.gross_profit) }}</div>
+      <div style="font-size:0.75rem; color:#059669; font-weight:600;">Margin: {{ metrics.profit_margin }}%</div>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-icon icon-lime">
+      <i class="fa-solid fa-star"></i>
+    </div>
+    <div class="metric-content">
+      <h3>Loyal Customers</h3>
+      <div class="metric-value">{{ customers|length }}</div>
+      <div style="font-size:0.75rem; color:var(--text-muted);">Registered reward members</div>
+    </div>
+  </div>
+</div>
+
+<!-- Sales by Category & Loyalty Members Grid -->
+<div style="display:grid; grid-template-columns: 1fr 1.5fr; gap:1.5rem;">
+  <!-- Category Revenue Table -->
+  <div class="card-table">
+    <div class="table-header-bar">
+      <h3 style="font-size:1rem; font-weight:700;">Revenue by Category</h3>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th style="text-align:right;">Sales Volume</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cat in category_revenue %}
+        <tr>
+          <td style="font-weight:600;">{{ cat.category_name }}</td>
+          <td style="text-align:right; font-weight:700; color:var(--primary);">
+            ${{ "%.2f"|format(cat.category_revenue) }}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="2" style="text-align:center; padding:1.5rem; color:var(--text-subtle);">No category data.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Loyal Customers CRM Table -->
+  <div class="card-table">
+    <div class="table-header-bar">
+      <h3 style="font-size:1rem; font-weight:700;">Customer Loyalty Rankings</h3>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Membership Tier</th>
+          <th>Points Balance</th>
+          <th style="text-align:right;">Total Spent</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in customers %}
+        <tr>
+          <td>
+            <div style="font-weight:600;">{{ c.name }}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">{{ c.phone }}</div>
+          </td>
+          <td>
+            <span class="badge badge-vip">{{ c.tier.label }} ({{ c.discount_rate }}% off)</span>
+          </td>
+          <td>
+            <span style="font-weight:700; color:var(--primary);">{{ c.points }} pts</span>
+          </td>
+          <td style="text-align:right; font-weight:700;">
+            ${{ "%.2f"|format(c.total_spent) }}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" style="text-align:center; padding:1.5rem; color:var(--text-subtle);">No customer accounts found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

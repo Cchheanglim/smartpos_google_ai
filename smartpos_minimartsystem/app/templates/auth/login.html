@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In - SmartPOS Mini-Mart System</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    .login-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      position: relative;
+    }
+    .login-card {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 440px;
+      padding: 2.25rem;
+      animation: zoomIn 0.3s ease-out;
+    }
+    .demo-role-btn {
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      background: var(--surface);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      transition: all 0.2s;
+    }
+    .demo-role-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: var(--primary-light);
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-blobs">
+    <div class="blob-1" style="background: radial-gradient(circle, rgba(125,57,235,0.2) 0%, transparent 70%);"></div>
+    <div class="blob-2" style="background: radial-gradient(circle, rgba(198,255,51,0.18) 0%, transparent 70%);"></div>
+  </div>
+
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <div class="brand-icon" style="margin: 0 auto 1rem; width: 56px; height: 56px; font-size: 1.5rem;">
+          <i class="fa-solid fa-store"></i>
+        </div>
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">SmartPOS <span class="brand-badge">PRO</span></h1>
+        <p style="font-size: 0.875rem; color: var(--text-muted); margin-top: 0.25rem;">Mini-Mart Retail Management System</p>
+      </div>
+
+      <!-- Flash messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}" style="margin-bottom: 1.25rem;">
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form action="{{ url_for('auth.login') }}" method="POST">
+        <div class="form-group">
+          <label class="form-label" for="loginEmail">Email Address</label>
+          <div style="position: relative;">
+            <i class="fa-solid fa-envelope" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-subtle);"></i>
+            <input type="email" id="loginEmail" name="email" class="form-control" style="padding-left: 2.5rem;" placeholder="name@smartpos.local" value="{{ email or '' }}" required autofocus>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="loginPassword">Password</label>
+          <div style="position: relative;">
+            <i class="fa-solid fa-lock" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-subtle);"></i>
+            <input type="password" id="loginPassword" name="password" class="form-control" style="padding-left: 2.5rem;" placeholder="Enter password" required>
+            <button type="button" onclick="togglePasswordVisibility()" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-subtle); cursor: pointer;">
+              <i class="fa-solid fa-eye" id="pwdEyeIcon"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top: 1rem;">
+          <i class="fa-solid fa-right-to-bracket"></i>
+          <span>Sign In to Terminal</span>
+        </button>
+      </form>
+
+      <!-- Demo Accounts Quick Fill -->
+      <div style="margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+        <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-subtle); text-align: center; margin-bottom: 0.75rem; letter-spacing: 0.5px;">
+          Demo Roles (Click to Autofill)
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
+          <button type="button" class="demo-role-btn" onclick="fillCredentials('admin@smartpos.local', 'password123')">
+            <i class="fa-solid fa-crown" style="color: var(--primary);"></i>
+            <span>Admin</span>
+          </button>
+          <button type="button" class="demo-role-btn" onclick="fillCredentials('cashier@smartpos.local', 'password123')">
+            <i class="fa-solid fa-cash-register" style="color: #10B981;"></i>
+            <span>Cashier</span>
+          </button>
+          <button type="button" class="demo-role-btn" onclick="fillCredentials('inventory@smartpos.local', 'password123')">
+            <i class="fa-solid fa-boxes-stacked" style="color: #F59E0B;"></i>
+            <span>Inventory</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function fillCredentials(email, pwd) {
+      document.getElementById('loginEmail').value = email;
+      document.getElementById('loginPassword').value = pwd;
+    }
+
+    function togglePasswordVisibility() {
+      const input = document.getElementById('loginPassword');
+      const icon = document.getElementById('pwdEyeIcon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+  </script>
+</body>
+</html>

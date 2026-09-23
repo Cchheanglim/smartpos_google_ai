@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory & Catalog{% endblock %}
+{% block page_title %}Merchandise & Inventory Management{% endblock %}
+
+{% block content %}
+<!-- Top Action Bar -->
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
+  <div style="display:flex; gap:1rem; align-items:center;">
+    <div style="position:relative; width:280px;">
+      <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:1rem; top:50%; transform:translateY(-50%); color:var(--text-subtle);"></i>
+      <input type="text" id="inventorySearch" class="form-control" style="padding-left:2.5rem;" placeholder="Search inventory...">
+    </div>
+  </div>
+
+  <div style="display:flex; gap:0.75rem;">
+    <a href="{{ url_for('products.barcodes') }}" class="btn btn-secondary">
+      <i class="fa-solid fa-barcode"></i> Print Barcodes
+    </a>
+    <button type="button" class="btn btn-primary" onclick="openModal('addProductModal')">
+      <i class="fa-solid fa-plus"></i> Add Product
+    </button>
+  </div>
+</div>
+
+<!-- Products Table Card -->
+<div class="card-table" style="margin-bottom:2rem;">
+  <div class="table-header-bar">
+    <div>
+      <h3 style="font-size:1rem; font-weight:700;">Catalog Inventory Items ({{ products|length }})</h3>
+      <p style="font-size:0.8rem; color:var(--text-muted);">Real-time stock on hand and cost tracking</p>
+    </div>
+  </div>
+
+  <table class="data-table" id="inventoryTable">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>SKU / Barcode</th>
+        <th>Category</th>
+        <th>Stock on Hand</th>
+        <th>Cost Price</th>
+        <th>Selling Price</th>
+        <th>Margin</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+      <tr>
+        <td>
+          <div style="display:flex; align-items:center; gap:0.75rem;">
+            <div style="width:42px; height:42px; border-radius:var(--radius-sm); background:#F1F5F9; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+              {% if p.image_url %}
+                <img src="{{ url_for('static', filename='uploads/products/' + p.image_url) }}" style="width:100%; height:100%; object-fit:cover;">
+              {% else %}
+                <i class="fa-solid fa-box" style="color:var(--text-subtle);"></i>
+              {% endif %}
+            </div>
+            <div>
+              <div style="font-weight:600; color:var(--text-main);">{{ p.name }}</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Unit: {{ p.unit }}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-family:monospace; font-weight:600;">{{ p.sku }}</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); font-family:monospace;">{{ p.barcode }}</div>
+        </td>
+        <td>
+          <span class="badge" style="background:#F1F5F9; color:var(--text-main);">
+            {{ p.category_name }}
+          </span>
+        </td>
+        <td>
+          <span class="badge {% if p.is_low_stock %}badge-bronze{% else %}badge-silver{% endif %}" style="font-weight:700;">
+            {{ p.quantity_in_stock }} {{ p.unit }}s
+          </span>
+          {% if p.is_low_stock %}
+            <div style="font-size:0.7rem; color:#DC2626; margin-top:2px;">Threshold: {{ p.low_stock_threshold }}</div>
+          {% endif %}
+        </td>
+        <td>${{ "%.2f"|format(p.cost_price) }}</td>
+        <td style="font-weight:700; color:var(--primary);">${{ "%.2f"|format(p.price) }}</td>
+        <td>
+          <span style="font-weight:600; color:#059669;">
+            {{ "%.1f"|format(p.gross_margin_percent) }}%
+          </span>
+        </td>
+        <td>
+          <div style="display:flex; gap:0.4rem;">
+            <!-- Adjust Stock Button -->
+            <button type="button" class="btn btn-secondary btn-sm" style="padding:0.3rem 0.6rem; font-size:0.8rem;" 
+                    onclick="openAdjustModal({{ p.id }}, '{{ p.name }}', {{ p.quantity_in_stock }})" title="Adjust Stock">
+              <i class="fa-solid fa-arrow-right-arrow-left"></i>
+            </button>
+            <!-- Delete Form -->
+            <form action="{{ url_for('products.delete_product', product_id=p.id) }}" method="POST" onsubmit="return confirm('Deactivate product from catalog?');" style="margin:0;">
+              <button type="submit" class="btn btn-secondary btn-sm" style="padding:0.3rem 0.6rem; font-size:0.8rem; color:#EF4444;" title="Deactivate">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Stock Adjustments Audit Trail -->
+<div class="card-table">
+  <div class="table-header-bar">
+    <div>
+      <h3 style="font-size:1rem; font-weight:700;">Inventory Shrinkage & Adjustment Log</h3>
+      <p style="font-size:0.8rem; color:var(--text-muted);">Audit trail of manual inventory overrides</p>
+    </div>
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Product</th>
+        <th>User</th>
+        <th>Change</th>
+        <th>Previous</th>
+        <th>New Qty</th>
+        <th>Reason</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in stock_logs %}
+      <tr>
+        <td style="font-size:0.8rem; color:var(--text-muted);">{{ log.created_at }}</td>
+        <td style="font-weight:600;">{{ log.product_name }}</td>
+        <td>{{ log.user_name }}</td>
+        <td>
+          <span style="font-weight:700; color:{% if log.change_quantity > 0 %}#059669{% else %}#DC2626{% endif %};">
+            {% if log.change_quantity > 0 %}+{% endif %}{{ log.change_quantity }}
+          </span>
+        </td>
+        <td>{{ log.previous_quantity }}</td>
+        <td style="font-weight:600;">{{ log.new_quantity }}</td>
+        <td><span class="badge" style="background:#F1F5F9;">{{ log.reason }}</span> {{ log.notes }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" style="text-align:center; padding:1.5rem; color:var(--text-subtle);">No adjustment logs found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal-backdrop" id="addProductModal">
+  <div class="modal-box modal-lg">
+    <div class="modal-header">
+      <h3 style="font-weight:700;"><i class="fa-solid fa-box-open" style="color:var(--primary);"></i> Add New Merchandise Item</h3>
+      <button type="button" onclick="closeModal('addProductModal')" style="background:none;border:none;font-size:1.1rem;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form action="{{ url_for('products.add_product') }}" method="POST" enctype="multipart/form-data">
+      <div class="modal-body">
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1rem;">
+          <div class="form-group">
+            <label class="form-label">Product Name</label>
+            <input type="text" name="name" class="form-control" placeholder="e.g. Angkor Beer Can 330ml" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select name="category_id" class="form-control" required>
+              {% for c in categories %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+          <div class="form-group">
+            <label class="form-label">SKU (Stock Keeping Unit)</label>
+            <input type="text" name="sku" class="form-control" placeholder="e.g. BEV-ANG-330" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Barcode (EAN-13 / UPC)</label>
+            <input type="text" name="barcode" class="form-control" placeholder="e.g. 884102938102" required>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:1rem;">
+          <div class="form-group">
+            <label class="form-label">Cost Price ($)</label>
+            <input type="number" step="0.01" name="cost_price" class="form-control" value="0.50" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Selling Price ($)</label>
+            <input type="number" step="0.01" name="price" class="form-control" value="0.80" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Initial Stock</label>
+            <input type="number" name="quantity_in_stock" class="form-control" value="50" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Low Stock Alert</label>
+            <input type="number" name="low_stock_threshold" class="form-control" value="10" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Product Image File</label>
+          <input type="file" name="image" class="form-control" accept="image/*">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addProductModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Product</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Adjust Stock Modal -->
+<div class="modal-backdrop" id="adjustStockModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 style="font-weight:700;"><i class="fa-solid fa-boxes-stacked" style="color:var(--primary);"></i> Stock Adjustment</h3>
+      <button type="button" onclick="closeModal('adjustStockModal')" style="background:none;border:none;font-size:1.1rem;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form id="adjustStockForm" method="POST">
+      <div class="modal-body">
+        <div style="background:#F8FAFC; padding:0.85rem; border-radius:var(--radius-md); border:1px solid var(--border-color); margin-bottom:1rem;">
+          <div style="font-weight:700; font-size:0.95rem;" id="adjustProductName">-</div>
+          <div style="font-size:0.8rem; color:var(--text-muted);">Current Physical Stock: <strong id="adjustCurrentStock">0</strong></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Quantity Change (+ to add, - to reduce)</label>
+          <input type="number" name="change_quantity" class="form-control" placeholder="e.g. 20 for restock or -3 for damage" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Reason</label>
+          <select name="reason" class="form-control" required>
+            <option value="Supplier Delivery Restock">Supplier Delivery Restock</option>
+            <option value="Damaged / Broken Goods">Damaged / Broken Goods</option>
+            <option value="Expired Date Return">Expired Date Return</option>
+            <option value="Audit Discrepancy Correction">Audit Discrepancy Correction</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Audit Notes</label>
+          <input type="text" name="notes" class="form-control" placeholder="Optional reference notes">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('adjustStockModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Apply Adjustment</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openAdjustModal(id, name, currentStock) {
+    document.getElementById('adjustProductName').innerText = name;
+    document.getElementById('adjustCurrentStock').innerText = currentStock;
+    document.getElementById('adjustStockForm').action = `/products/${id}/adjust-stock`;
+    openModal('adjustStockModal');
+  }
+
+  // Client-side search filtering
+  document.getElementById('inventorySearch').addEventListener('input', function(e) {
+    const query = e.target.value.toLowerCase().trim();
+    document.querySelectorAll('#inventoryTable tbody tr').forEach(row => {
+      row.style.display = row.innerText.toLowerCase().includes(query) ? '' : 'none';
+    });
+  });
+</script>
+{% endblock %}

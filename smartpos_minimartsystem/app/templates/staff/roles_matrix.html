@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}RBAC Matrix{% endblock %}
+{% block page_title %}Role-Based Access Control (RBAC) Matrix{% endblock %}
+
+{% block content %}
+<form action="{{ url_for('staff.roles_matrix') }}" method="POST">
+  <div class="card-table">
+    <div class="table-header-bar">
+      <div>
+        <h3 style="font-size:1rem; font-weight:700;">Granular System Permissions Matrix</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted);">
+          Configure access levels for each organizational role. Super Admin automatically maintains all permissions.
+        </p>
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <i class="fa-solid fa-floppy-disk"></i> Save Permissions Matrix
+      </button>
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:35%;">Permission Capability</th>
+          {% for r in roles %}
+            {% if r.name != 'super_admin' %}
+              <th style="text-align:center;">{{ r.display_name }}</th>
+            {% endif %}
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in permissions %}
+        <tr>
+          <td>
+            <div style="font-weight:600; color:var(--text-main);">{{ p.display_name }}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">{{ p.description or p.name }}</div>
+          </td>
+          {% for r in roles %}
+            {% if r.name != 'super_admin' %}
+              <td style="text-align:center;">
+                <input type="checkbox" 
+                       name="perm_{{ r.name }}" 
+                       value="{{ p.name }}"
+                       {% if p.name in r.permissions %}checked{% endif %}
+                       style="width:18px; height:18px; cursor:pointer; accent-color:var(--primary);">
+              </td>
+            {% endif %}
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</form>
+{% endblock %}

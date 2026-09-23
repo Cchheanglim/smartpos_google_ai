@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Receipt {{ sale.transaction_code }}{% endblock %}
+{% block page_title %}Transaction Receipt{% endblock %}
+
+{% block content %}
+<div style="max-width:480px; margin:0 auto;">
+  <div style="display:flex; justify-content:space-between; margin-bottom:1rem;" class="no-print">
+    <a href="{{ url_for('sales.history') }}" class="btn btn-secondary">
+      <i class="fa-solid fa-arrow-left"></i> Back to Ledger
+    </a>
+    <button type="button" class="btn btn-primary" onclick="window.print()">
+      <i class="fa-solid fa-print"></i> Print Receipt
+    </button>
+  </div>
+
+  <div class="card-table receipt-printable" style="padding:1.5rem; background:#fff;">
+    <div style="text-align:center; margin-bottom:1.25rem;">
+      <div class="brand-icon" style="margin:0 auto 0.5rem; width:44px; height:44px;">
+        <i class="fa-solid fa-store"></i>
+      </div>
+      <h2 style="font-size:1.25rem; font-weight:800; color:var(--text-main);">SmartPOS Mini-Mart</h2>
+      <p style="font-size:0.8rem; color:var(--text-muted);">#45 Norodom Blvd, Phnom Penh</p>
+      <p style="font-size:0.8rem; color:var(--text-muted);">Tel: +855 23 999 888</p>
+      <div style="margin-top:0.5rem; font-family:monospace; font-weight:700; color:var(--primary); font-size:0.95rem;">
+        {{ sale.transaction_code }}
+      </div>
+      <div style="font-size:0.75rem; color:var(--text-muted);">{{ sale.completed_at }}</div>
+    </div>
+
+    <hr style="border:0; border-top:1px dashed var(--border-color); margin:1rem 0;">
+
+    <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:0.5rem;">
+      <span><strong>Cashier:</strong> {{ sale.cashier_name }}</span>
+      <span><strong>Customer:</strong> {{ sale.customer_name or 'Walk-in' }}</span>
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin:1rem 0;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border-color); text-align:left;">
+          <th style="padding:0.4rem 0;">Item</th>
+          <th style="padding:0.4rem 0; text-align:center;">Qty</th>
+          <th style="padding:0.4rem 0; text-align:right;">Price</th>
+          <th style="padding:0.4rem 0; text-align:right;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in sale.items %}
+        <tr style="border-bottom:1px solid #F1F5F9;">
+          <td style="padding:0.5rem 0;">
+            <div style="font-weight:600;">{{ item.product_name }}</div>
+            <div style="font-size:0.7rem; color:var(--text-muted);">{{ item.sku }}</div>
+          </td>
+          <td style="padding:0.5rem 0; text-align:center;">{{ item.quantity }}</td>
+          <td style="padding:0.5rem 0; text-align:right;">${{ "%.2f"|format(item.unit_price) }}</td>
+          <td style="padding:0.5rem 0; text-align:right; font-weight:700;">${{ "%.2f"|format(item.total) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div style="display:flex; flex-direction:column; gap:0.35rem; font-size:0.85rem;">
+      <div style="display:flex; justify-content:space-between;">
+        <span>Subtotal:</span>
+        <span>${{ "%.2f"|format(sale.subtotal) }}</span>
+      </div>
+      {% if sale.discount_amount > 0 %}
+      <div style="display:flex; justify-content:space-between; color:#059669;">
+        <span>Discount ({{ sale.discount_percent }}%):</span>
+        <span>-${{ "%.2f"|format(sale.discount_amount) }}</span>
+      </div>
+      {% endif %}
+      <div style="display:flex; justify-content:space-between;">
+        <span>VAT Tax ({{ sale.tax_percent }}%):</span>
+        <span>${{ "%.2f"|format(sale.tax_amount) }}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:1.15rem; font-weight:800; border-top:1px dashed var(--border-color); padding-top:0.5rem; margin-top:0.25rem;">
+        <span>TOTAL (USD):</span>
+        <span>${{ "%.2f"|format(sale.total_amount) }}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:1rem; font-weight:700; color:var(--primary);">
+        <span>TOTAL (KHR):</span>
+        <span>{{ sale.total_khr }} ៛</span>
+      </div>
+    </div>
+
+    <hr style="border:0; border-top:1px dashed var(--border-color); margin:1rem 0;">
+
+    <div style="font-size:0.8rem; color:var(--text-muted);">
+      <div style="display:flex; justify-content:space-between;">
+        <span>Payment Method:</span>
+        <span style="font-weight:600; color:var(--text-main);">{{ sale.payment.method }}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <span>Amount Tendered:</span>
+        <span>${{ "%.2f"|format(sale.payment.amount_paid_usd) }} + {{ sale.payment.amount_paid_khr|int }} ៛</span>
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <span>Change:</span>
+        <span>${{ "%.2f"|format(sale.payment.change_usd) }} ({{ sale.payment.change_khr|int }} ៛)</span>
+      </div>
+    </div>
+
+    <div style="text-align:center; font-size:0.75rem; color:var(--text-subtle); margin-top:1.5rem;">
+      <p>*** Goods sold are returnable within 7 days with valid receipt ***</p>
+      <p>Thank you for shopping at SmartPOS Mini-Mart!</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

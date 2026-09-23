@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Access Denied{% endblock %}
+{% block page_title %}Permission Denied (403){% endblock %}
+
+{% block content %}
+<div style="text-align:center; padding:4rem 1rem; max-width:500px; margin:0 auto;">
+  <div style="width:80px; height:80px; border-radius:50%; background:#FEE2E2; color:#DC2626; display:flex; align-items:center; justify-content:center; font-size:2.2rem; margin:0 auto 1.5rem;">
+    <i class="fa-solid fa-lock"></i>
+  </div>
+  <h2 style="font-size:1.75rem; font-weight:800; color:var(--text-main); margin-bottom:0.5rem;">Restricted Access</h2>
+  <p style="color:var(--text-muted); margin-bottom:1.5rem;">
+    Your current employee role does not have permission to access this module. Please speak with your store manager to request permission elevation.
+  </p>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">
+    <i class="fa-solid fa-house"></i> Return to Dashboard
+  </a>
+</div>
+{% endblock %}
