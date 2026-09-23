@@ -1,0 +1,10 @@
+{
+  "name": "SmartPOS - Inventory & Point of Sale",
+  "description": "Point-of-Sale and Inventory Management System with role-based access control, barcode scanning, sales checkout, refunds, purchase orders, attendance, and analytics.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
