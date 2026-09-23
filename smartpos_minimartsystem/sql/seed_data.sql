@@ -64,11 +64,11 @@ VALUES
 -- Password for all seed users is: password123
 -- Stored as werkzeug / bcrypt pbkdf2 sha256 hash
 INSERT INTO `users` (`id`, `name`, `email`, `phone`, `password_hash`, `role_id`, `shift_name`, `shift_start`, `shift_end`, `is_active`, `profile_picture`) VALUES
-(1, 'Chheanglim Chhum', 'admin@smartpos.local', '012345678', 'pbkdf2:sha256:600000$WvQY8rK9k0xVzYl4$6c167b5e438bc8610eb67beaf8df572a1e0ce5e9d997d4c88e0019233be1267a', 1, 'Full Day', '08:00:00', '17:00:00', 1, '109d0bba2885419aa36f1cf95552b8ee.png'),
-(2, 'Dara Sok', 'cashier@smartpos.local', '098765432', 'pbkdf2:sha256:600000$WvQY8rK9k0xVzYl4$6c167b5e438bc8610eb67beaf8df572a1e0ce5e9d997d4c88e0019233be1267a', 4, 'Morning', '06:00:00', '14:00:00', 1, '64b7647b32ed4d23bebd67b77aad3d11.jpg'),
-(3, 'Bopha Meas', 'inventory@smartpos.local', '077889900', 'pbkdf2:sha256:600000$WvQY8rK9k0xVzYl4$6c167b5e438bc8610eb67beaf8df572a1e0ce5e9d997d4c88e0019233be1267a', 3, 'Afternoon', '14:00:00', '22:00:00', 1, '73cad91d621142b1b46d3aac4a1d3770.jpg'),
-(4, 'Vannak Heng', 'cashier2@smartpos.local', '011223344', 'pbkdf2:sha256:600000$WvQY8rK9k0xVzYl4$6c167b5e438bc8610eb67beaf8df572a1e0ce5e9d997d4c88e0019233be1267a', 4, 'Night', '22:00:00', '06:00:00', 1, 'f86e67858910489ba513eae41ad5b941.png')
-ON DUPLICATE KEY UPDATE `email`=VALUES(`email`);
+(1, 'Chheanglim Chhum', 'admin@smartpos.local', '012345678', 'pbkdf2:sha256:600000$WvQY8rK9k0xVzYl4$98f0957998e70032757b32e0977e263cd8dbdf3cba68ded4e164ba41956a6dbe', 1, 'Full Day', '08:00:00', '17:00:00', 1, '109d0bba2885419aa36f1cf95552b8ee.png'),
+(2, 'Dara Sok', 'cashier@smartpos.local', '098765432', 'pbkdf2:sha256:600000$WvQY8rK9k0xVzYl4$98f0957998e70032757b32e0977e263cd8dbdf3cba68ded4e164ba41956a6dbe', 4, 'Morning', '06:00:00', '14:00:00', 1, '64b7647b32ed4d23bebd67b77aad3d11.jpg'),
+(3, 'Bopha Meas', 'inventory@smartpos.local', '077889900', 'pbkdf2:sha256:600000$WvQY8rK9k0xVzYl4$98f0957998e70032757b32e0977e263cd8dbdf3cba68ded4e164ba41956a6dbe', 3, 'Afternoon', '14:00:00', '22:00:00', 1, '73cad91d621142b1b46d3aac4a1d3770.jpg'),
+(4, 'Vannak Heng', 'cashier2@smartpos.local', '011223344', 'pbkdf2:sha256:600000$WvQY8rK9k0xVzYl4$98f0957998e70032757b32e0977e263cd8dbdf3cba68ded4e164ba41956a6dbe', 4, 'Night', '22:00:00', '06:00:00', 1, 'f86e67858910489ba513eae41ad5b941.png')
+ON DUPLICATE KEY UPDATE `email`=VALUES(`email`), `password_hash`=VALUES(`password_hash`);
 
 -- 5. Categories
 INSERT INTO `categories` (`id`, `name`, `description`, `icon`, `is_active`) VALUES

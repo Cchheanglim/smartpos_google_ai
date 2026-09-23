@@ -68,6 +68,7 @@ class DatabaseManager:
                 self.is_mysql = True
                 print(f"[SmartPOS DB] Connected successfully to MySQL ({self.host}:{self.port}/{self.database})")
                 self._bootstrap_mysql_schema()
+                self._heal_seed_users()
                 return
             except Exception as e:
                 print(f"[SmartPOS DB] MySQL not available ({e}). Initializing SQLite fallback: {self.sqlite_path}")
@@ -76,6 +77,20 @@ class DatabaseManager:
 
         self.is_mysql = False
         self._bootstrap_sqlite_schema()
+        self._heal_seed_users()
+
+    def _heal_seed_users(self):
+        """Repairs seed accounts to ensure default credentials (password123) work seamlessly."""
+        valid_hash = 'pbkdf2:sha256:600000$WvQY8rK9k0xVzYl4$98f0957998e70032757b32e0977e263cd8dbdf3cba68ded4e164ba41956a6dbe'
+        legacy_hash = 'pbkdf2:sha256:600000$WvQY8rK9k0xVzYl4$6c167b5e438bc8610eb67beaf8df572a1e0ce5e9d997d4c88e0019233be1267a'
+        try:
+            self.execute_update(
+                "UPDATE users SET password_hash = %s WHERE password_hash = %s OR password_hash IN ('password', 'password123', 'admin123');",
+                (valid_hash, legacy_hash)
+            )
+        except Exception:
+            pass
+
 
     def get_connection(self):
         """Returns an active connection object."""
@@ -438,7 +453,7 @@ class DatabaseManager:
             cursor.execute("INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (4, ?)", (p_id,))
 
         # Users (Password: password123)
-        pwd_hash = 'pbkdf2:sha256:600000$WvQY8rK9k0xVzYl4$6c167b5e438bc8610eb67beaf8df572a1e0ce5e9d997d4c88e0019233be1267a'
+        pwd_hash = 'pbkdf2:sha256:600000$WvQY8rK9k0xVzYl4$98f0957998e70032757b32e0977e263cd8dbdf3cba68ded4e164ba41956a6dbe'
         cursor.executemany("INSERT OR IGNORE INTO users (id, name, email, phone, password_hash, role_id, shift_name, shift_start, shift_end, profile_picture) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
             (1, 'Chheanglim Chhum', 'admin@smartpos.local', '012345678', pwd_hash, 1, 'Full Day', '08:00:00', '17:00:00', '109d0bba2885419aa36f1cf95552b8ee.png'),
             (2, 'Dara Sok', 'cashier@smartpos.local', '098765432', pwd_hash, 4, 'Morning', '06:00:00', '14:00:00', '64b7647b32ed4d23bebd67b77aad3d11.jpg'),

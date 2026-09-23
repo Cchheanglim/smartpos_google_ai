@@ -35,6 +35,15 @@ class AuthService:
         if not user.verify_password(password):
             return None, "Invalid email address or password."
 
+        # Self-heal password hash if needed
+        try:
+            from werkzeug.security import check_password_hash
+            if not check_password_hash(user._password_hash, password):
+                user.set_password(password)
+                self.user_repo.update(user)
+        except Exception:
+            pass
+
         return user, None
 
     def get_user_by_id(self, user_id: int) -> Optional[User]:
