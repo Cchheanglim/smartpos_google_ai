@@ -44,6 +44,10 @@ class DatabaseManager:
         self._test_connection_and_init()
         self._initialized = True
 
+    @property
+    def db_type(self) -> str:
+        return 'mysql' if self.is_mysql else 'sqlite'
+
     def _test_connection_and_init(self):
         """Attempts to connect to MySQL; if unavailable, uses SQLite fallback seamlessly."""
         if HAS_PYMYSQL:

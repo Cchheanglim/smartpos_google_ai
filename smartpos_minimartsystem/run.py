@@ -21,7 +21,8 @@ if __name__ == '__main__':
     print("=" * 60)
     print("  SmartPOS Mini-Mart System (Python + Flask + MySQL)")
     print(f"  Starting development server on http://localhost:{port}")
-    print(f"  Database Mode: {db_manager.db_type.upper()}")
+    db_mode = getattr(db_manager, 'db_type', 'mysql' if getattr(db_manager, 'is_mysql', False) else 'sqlite')
+    print(f"  Database Mode: {db_mode.upper()}")
     print("=" * 60)
 
     app.run(host=host, port=port, debug=debug)
