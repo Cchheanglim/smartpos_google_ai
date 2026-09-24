@@ -42,7 +42,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           style={{ cursor: sidebarCollapsed ? 'pointer' : 'default' }}
         >
           <MiniMartLogo size={sidebarCollapsed ? 32 : 36} withRing />
-          {!sidebarCollapsed && <span style={{ marginLeft: '4px' }}>Mini Mart</span>}
+          {!sidebarCollapsed && (
+            <span style={{ marginLeft: '6px', fontWeight: 700, letterSpacing: '-0.2px' }}>
+              SmartPOS <span style={{ fontSize: '11px', background: 'var(--primary)', color: '#fff', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>PRO</span>
+            </span>
+          )}
         </div>
       </div>
 

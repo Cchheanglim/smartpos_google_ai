@@ -123,3 +123,41 @@ def roles_matrix():
         roles=roles,
         permissions=system_permissions
     )
+
+
+@staff_bp.route('/<int:user_id>/deactivate', methods=['POST'])
+@login_required
+@permission_required('manage_users')
+def deactivate_staff(user_id):
+    current_user = auth_manager.get_current_user()
+    if user_id == current_user.id:
+        flash("You cannot deactivate your own active session.", 'error')
+        return redirect(url_for('staff.index'))
+
+    staff_service.deactivate_staff(user_id)
+    flash("Staff account deactivated. Terminal login has been disabled.", 'info')
+    return redirect(url_for('staff.index'))
+
+
+@staff_bp.route('/<int:user_id>/reactivate', methods=['POST'])
+@login_required
+@permission_required('manage_users')
+def reactivate_staff(user_id):
+    staff_service.reactivate_staff(user_id)
+    flash("Staff account reactivated successfully. Terminal access restored.", 'success')
+    return redirect(url_for('staff.index'))
+
+
+@staff_bp.route('/<int:user_id>/reset-password', methods=['POST'])
+@login_required
+@permission_required('manage_users')
+def reset_password(user_id):
+    new_password = request.form.get('new_password', '').strip()
+    if not new_password or len(new_password) < 6:
+        flash("Password must be at least 6 characters long.", 'error')
+        return redirect(url_for('staff.index'))
+
+    staff_service.reset_password(user_id, new_password)
+    flash("Staff password successfully reset.", 'success')
+    return redirect(url_for('staff.index'))
+

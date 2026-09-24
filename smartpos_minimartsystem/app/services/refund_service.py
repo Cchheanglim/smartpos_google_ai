@@ -66,6 +66,21 @@ class RefundService:
         )
 
         saved_refund = self.sale_repo.create_refund(refund)
+
+        # Notify via Telegram
+        try:
+            from .telegram_service import telegram_service
+            cashier_user = UserRepository().get_by_id(processed_by)
+            cashier_name = cashier_user.name if cashier_user else "Cashier"
+            telegram_service.notify_refund(
+                transaction_code=sale.transaction_code,
+                refund_amount=saved_refund.total_amount,
+                cashier_name=cashier_name,
+                reason=reason
+            )
+        except Exception:
+            pass
+
         return saved_refund, None
 
 
@@ -107,6 +122,16 @@ class StaffService:
         saved = self.user_repo.create(user)
         return saved, None
 
+    def deactivate_staff(self, user_id: int) -> bool:
+        return self.user_repo.delete(user_id)
+
+    def reactivate_staff(self, user_id: int) -> bool:
+        return self.user_repo.reactivate(user_id)
+
+    def reset_password(self, user_id: int, new_password: str) -> bool:
+        hashed = PasswordHasher.hash_password(new_password)
+        return self.user_repo.reset_password(user_id, hashed)
+
     def clock_in(self, user_id: int, starting_cash: float = 0.0, notes: str = '') -> Tuple[Optional[AttendanceRecord], Optional[str]]:
         active = self.attendance_repo.get_active_session(user_id)
         if active:
@@ -129,8 +154,25 @@ class StaffService:
 
         active.clock_out_now(counted_cash)
         if notes:
-            active.notes += f" | {notes}"
+            active.notes = f"{active.notes} | {notes}" if active.notes else notes
         self.attendance_repo.update(active)
+
+        # Dispatch shift reconciliation alert to Telegram
+        try:
+            from .telegram_service import telegram_service
+            staff_user = self.user_repo.get_by_id(user_id)
+            staff_name = staff_user.name if staff_user else "Staff"
+            telegram_service.notify_shift_reconciliation(
+                staff_name=staff_name,
+                starting_cash=active.starting_cash,
+                counted_cash=counted_cash,
+                expected_cash=active.starting_cash,  # baseline float
+                discrepancy=active.cash_discrepancy or 0.0,
+                notes=active.notes
+            )
+        except Exception:
+            pass
+
         return active, None
 
     def update_role_permissions(self, role_name: str, permission_names: List[str]) -> bool:

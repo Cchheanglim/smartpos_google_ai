@@ -34,6 +34,7 @@
         <th>Phone</th>
         <th>Active Status</th>
         <th>Role Assignment</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -63,7 +64,7 @@
           {% if s.is_active %}
             <span class="badge" style="background:#D1FAE5; color:#065F46;">Active</span>
           {% else %}
-            <span class="badge" style="background:#FEE2E2; color:#991B1B;">Inactive</span>
+            <span class="badge" style="background:#FEE2E2; color:#991B1B;">Disabled</span>
           {% endif %}
         </td>
         <td>
@@ -75,6 +76,28 @@
             </select>
             <button type="submit" class="btn btn-secondary btn-sm" style="padding:0.25rem 0.5rem; font-size:0.75rem;">Set</button>
           </form>
+        </td>
+        <td>
+          <div style="display:flex; gap:0.35rem;">
+            <button type="button" class="btn btn-secondary btn-sm" style="padding:0.25rem 0.5rem; font-size:0.75rem;" onclick="promptResetPassword({{ s.id }}, '{{ s.name }}')" title="Reset Password">
+              <i class="fa-solid fa-key"></i>
+            </button>
+            {% if s.id != current_user.id %}
+              {% if s.is_active %}
+              <form action="{{ url_for('staff.deactivate_staff', user_id=s.id) }}" method="POST" onsubmit="return confirm('Deactivate account for {{ s.name }}?');" style="margin:0;">
+                <button type="submit" class="btn btn-secondary btn-sm" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#EF4444;" title="Disable Login">
+                  <i class="fa-solid fa-user-slash"></i>
+                </button>
+              </form>
+              {% else %}
+              <form action="{{ url_for('staff.reactivate_staff', user_id=s.id) }}" method="POST" style="margin:0;">
+                <button type="submit" class="btn btn-secondary btn-sm" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#059669;" title="Reactivate Account">
+                  <i class="fa-solid fa-user-check"></i>
+                </button>
+              </form>
+              {% endif %}
+            {% endif %}
+          </div>
         </td>
       </tr>
       {% endfor %}
@@ -189,4 +212,41 @@
     </form>
   </div>
 </div>
+
+<!-- Reset Password Modal -->
+<div class="modal-backdrop" id="resetPasswordModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 style="font-weight:700;"><i class="fa-solid fa-key" style="color:var(--primary);"></i> Reset Employee Password</h3>
+      <button type="button" onclick="closeModal('resetPasswordModal')" style="background:none;border:none;font-size:1.1rem;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form id="resetPasswordForm" method="POST">
+      <div class="modal-body">
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">
+          Assign a new password for <strong id="resetTargetName">Employee</strong>:
+        </p>
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <input type="password" name="new_password" class="form-control" placeholder="Enter new password (min 6 chars)" required minlength="6">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('resetPasswordModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save New Password</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function promptResetPassword(userId, userName) {
+  const form = document.getElementById('resetPasswordForm');
+  const nameEl = document.getElementById('resetTargetName');
+  if (form && nameEl) {
+    form.action = `/staff/${userId}/reset-password`;
+    nameEl.innerText = userName;
+    openModal('resetPasswordModal');
+  }
+}
+</script>
 {% endblock %}

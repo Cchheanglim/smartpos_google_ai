@@ -234,4 +234,24 @@ class CheckoutService:
                 customer.add_spend(saved_sale.total_amount)
                 self.customer_repo.update(customer)
 
+        # Dispatch automated Telegram alerts asynchronously / non-blocking
+        try:
+            from .telegram_service import telegram_service
+            sale_dict = saved_sale.to_dict()
+            telegram_service.notify_sale(sale_dict, calc['line_items'])
+
+            # Check for low-stock warnings on purchased products
+            for li in calc['line_items']:
+                updated_p = self.product_repo.get_by_id(li['product_id'])
+                if updated_p and updated_p.is_low_stock:
+                    telegram_service.notify_low_stock(
+                        product_name=updated_p.name,
+                        sku=updated_p.sku,
+                        remaining=updated_p.quantity_in_stock,
+                        threshold=updated_p.low_stock_threshold
+                    )
+        except Exception as e:
+            # Notifications should never disrupt checkout
+            pass
+
         return saved_sale, None

@@ -103,3 +103,39 @@ def checkout():
         'success': True,
         'sale': sale.to_dict()
     })
+
+
+@api_bp.route('/telegram-test', methods=['POST'])
+@login_required
+def telegram_test():
+    """Validates Telegram configuration and sends an instant test alert."""
+    from ..services.telegram_service import telegram_service
+    configured = telegram_service.is_configured()
+    if not configured:
+        return jsonify({
+            'success': False,
+            'configured': False,
+            'error': 'Telegram credentials not set. Please add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID to your .env file.'
+        }), 400
+
+    test_msg = (
+        "<b>🟢 SmartPOS Telegram Integration Active</b>\n\n"
+        "⚡ <b>Status:</b> Connected & Operational\n"
+        "🏪 <b>Store:</b> SmartPOS Enterprise Mini-Mart\n"
+        "🕒 <b>Timestamp:</b> <i>Just now</i>\n\n"
+        "All store alerts (Sales, Low Stock, Shift Floats, Refunds, POs, and Tasks) will be broadcasted here."
+    )
+    ok = telegram_service.send_message(test_msg)
+    if ok:
+        return jsonify({
+            'success': True,
+            'configured': True,
+            'message': 'Test alert dispatched to Telegram successfully!'
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'configured': True,
+            'error': 'Failed to reach Telegram API. Please verify that your BOT_TOKEN is correct and the bot has permission to message CHAT_ID.'
+        }), 502
+

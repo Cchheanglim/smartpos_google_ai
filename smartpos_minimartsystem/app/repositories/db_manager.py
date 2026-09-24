@@ -78,6 +78,85 @@ class DatabaseManager:
         self.is_mysql = False
         self._bootstrap_sqlite_schema()
         self._heal_seed_users()
+        self._ensure_tables()
+
+    def _ensure_tables(self):
+        """Ensures purchase_orders and purchase_order_items exist in MySQL or SQLite."""
+        try:
+            if self.is_mysql:
+                self.execute_non_query("""
+                CREATE TABLE IF NOT EXISTS `purchase_orders` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `po_number` VARCHAR(50) NOT NULL UNIQUE,
+                    `supplier_id` INT NULL,
+                    `supplier_name` VARCHAR(150) NOT NULL,
+                    `status` ENUM('draft', 'ordered', 'received', 'cancelled') DEFAULT 'draft',
+                    `expected_delivery` DATE NULL,
+                    `total_amount` DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                    `notes` TEXT NULL,
+                    `created_by` INT NULL,
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `received_at` DATETIME NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                """)
+                self.execute_non_query("""
+                CREATE TABLE IF NOT EXISTS `purchase_order_items` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `po_id` INT NOT NULL,
+                    `product_id` INT NOT NULL,
+                    `product_name` VARCHAR(150) NOT NULL,
+                    `quantity` INT NOT NULL,
+                    `unit_cost` DECIMAL(10, 2) NOT NULL,
+                    `subtotal` DECIMAL(10, 2) NOT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                """)
+            else:
+                conn = self.get_connection()
+                cursor = conn.cursor()
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS purchase_orders (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    po_number TEXT UNIQUE NOT NULL,
+                    supplier_id INTEGER,
+                    supplier_name TEXT NOT NULL,
+                    status TEXT DEFAULT 'draft',
+                    expected_delivery TEXT,
+                    total_amount REAL NOT NULL DEFAULT 0.0,
+                    notes TEXT,
+                    created_by INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    received_at TIMESTAMP
+                );
+                """)
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS purchase_order_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    po_id INTEGER NOT NULL,
+                    product_id INTEGER NOT NULL,
+                    product_name TEXT NOT NULL,
+                    quantity INTEGER NOT NULL,
+                    unit_cost REAL NOT NULL,
+                    subtotal REAL NOT NULL
+                );
+                """)
+                conn.commit()
+                # Sample PO seed if empty
+                cursor.execute("SELECT count(*) as c FROM purchase_orders;")
+                row = cursor.fetchone()
+                if row and (row[0] if isinstance(row, tuple) else row['c']) == 0:
+                    cursor.execute("""
+                    INSERT INTO purchase_orders (id, po_number, supplier_id, supplier_name, status, expected_delivery, total_amount, notes, created_by)
+                    VALUES (1, 'PO-2026-001', 1, 'Angkor Beverage Distribution Co., Ltd.', 'ordered', '2026-09-30', 240.00, 'Beverage replenishment for weekend rush', 1);
+                    """)
+                    cursor.execute("""
+                    INSERT INTO purchase_order_items (id, po_id, product_id, product_name, quantity, unit_cost, subtotal)
+                    VALUES (1, 1, 1, 'Coca Cola 330ml Can', 240, 0.40, 96.00),
+                           (2, 1, 2, 'Angkor Beer Can 330ml', 240, 0.60, 144.00);
+                    """)
+                    conn.commit()
+                conn.close()
+        except Exception as e:
+            pass
 
     def _heal_seed_users(self):
         """Repairs seed accounts to ensure default credentials (password123) work seamlessly."""

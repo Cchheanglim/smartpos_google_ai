@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Supplier Purchase Orders{% endblock %}
+{% block page_title %}Purchase Orders & Procurement Lifecycle{% endblock %}
+
+{% block content %}
+<!-- Top Action Bar -->
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+  <div style="display:flex; gap:0.75rem;">
+    <a href="{{ url_for('products.index') }}" class="btn btn-secondary">
+      <i class="fa-solid fa-arrow-left"></i> Back to Inventory
+    </a>
+    <a href="{{ url_for('products.barcodes') }}" class="btn btn-secondary">
+      <i class="fa-solid fa-barcode"></i> Barcode Tags
+    </a>
+  </div>
+
+  <button type="button" class="btn btn-primary" onclick="openModal('createPoModal')">
+    <i class="fa-solid fa-cart-plus"></i> Create Purchase Order
+  </button>
+</div>
+
+<!-- PO Workflow & Status Metric Cards -->
+<div class="metrics-grid" style="margin-bottom:1.5rem;">
+  <div class="metric-card">
+    <div class="metric-icon icon-purple">
+      <i class="fa-solid fa-truck-ramp-box"></i>
+    </div>
+    <div class="metric-content">
+      <h3>Active Orders</h3>
+      <div class="metric-value">{{ purchase_orders|length }}</div>
+      <div style="font-size:0.75rem; color:var(--text-muted);">Total procurement requests</div>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-icon icon-emerald">
+      <i class="fa-solid fa-boxes-packing"></i>
+    </div>
+    <div class="metric-content">
+      <h3>Auto-Restocked</h3>
+      <div class="metric-value">
+        {{ purchase_orders|selectattr('status', 'equalto', 'received')|list|length }}
+      </div>
+      <div style="font-size:0.75rem; color:#059669; font-weight:600;">Stock quantities updated live</div>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-icon icon-amber">
+      <i class="fa-solid fa-clock"></i>
+    </div>
+    <div class="metric-content">
+      <h3>Pending Delivery</h3>
+      <div class="metric-value" style="color:#D97706;">
+        {{ purchase_orders|selectattr('status', 'equalto', 'ordered')|list|length }}
+      </div>
+      <div style="font-size:0.75rem; color:var(--text-muted);">En route from suppliers</div>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-icon icon-lime">
+      <i class="fa-solid fa-handshake"></i>
+    </div>
+    <div class="metric-content">
+      <h3>Active Suppliers</h3>
+      <div class="metric-value">{{ suppliers|length }}</div>
+      <div style="font-size:0.75rem; color:var(--text-muted);">Approved vendor partners</div>
+    </div>
+  </div>
+</div>
+
+<!-- Purchase Orders Ledger -->
+<div class="card-table">
+  <div class="table-header-bar">
+    <div>
+      <h3 style="font-size:1rem; font-weight:700;">Purchase Order Records</h3>
+      <p style="font-size:0.8rem; color:var(--text-muted);">State Machine: Draft ➔ Ordered ➔ Received (Automated Catalog Restock)</p>
+    </div>
+  </div>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>PO Number</th>
+        <th>Supplier</th>
+        <th>Expected Delivery</th>
+        <th>Line Items</th>
+        <th>Total Cost</th>
+        <th>Workflow Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for po in purchase_orders %}
+      <tr>
+        <td style="font-family:monospace; font-weight:700; color:var(--primary);">
+          {{ po.po_number }}
+        </td>
+        <td>
+          <div style="font-weight:600;">{{ po.supplier_name }}</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">{{ po.notes or 'Standard replenishment' }}</div>
+        </td>
+        <td style="font-size:0.85rem;">
+          {{ po.expected_delivery or '-' }}
+        </td>
+        <td>
+          <span class="badge" style="background:#F1F5F9; font-weight:600;">
+            {{ po.items|length }} item(s) • {{ po.total_units or 0 }} units
+          </span>
+        </td>
+        <td style="font-weight:700; color:var(--primary); font-size:0.95rem;">
+          ${{ "%.2f"|format(po.total_amount) }}
+        </td>
+        <td>
+          {% if po.status == 'received' %}
+            <span class="badge" style="background:#D1FAE5; color:#065F46; font-weight:700;">
+              <i class="fa-solid fa-check"></i> RECEIVED & RESTOCKED
+            </span>
+          {% elif po.status == 'ordered' %}
+            <span class="badge" style="background:#FEF3C7; color:#B45309; font-weight:700;">
+              <i class="fa-solid fa-truck"></i> ORDERED / IN TRANSIT
+            </span>
+          {% elif po.status == 'draft' %}
+            <span class="badge" style="background:#F1F5F9; color:var(--text-muted);">
+              DRAFT
+            </span>
+          {% else %}
+            <span class="badge" style="background:#FEE2E2; color:#991B1B;">
+              {{ po.status|upper }}
+            </span>
+          {% endif %}
+        </td>
+        <td>
+          <div style="display:flex; gap:0.4rem;">
+            {% if po.status != 'received' and po.status != 'cancelled' %}
+            <form action="{{ url_for('products.update_po_status', po_id=po.id) }}" method="POST" onsubmit="return confirm('Confirm receiving this delivery? Product inventory stock will automatically increment!');" style="margin:0;">
+              <input type="hidden" name="status" value="received">
+              <button type="submit" class="btn btn-primary btn-sm" style="padding:0.25rem 0.6rem; font-size:0.75rem; background:#059669; border-color:#059669;" title="Mark Received & Increment Stock">
+                <i class="fa-solid fa-box-check"></i> Receive & Restock
+              </button>
+            </form>
+            <form action="{{ url_for('products.update_po_status', po_id=po.id) }}" method="POST" onsubmit="return confirm('Cancel this PO?');" style="margin:0;">
+              <input type="hidden" name="status" value="cancelled">
+              <button type="submit" class="btn btn-secondary btn-sm" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#EF4444;" title="Cancel Order">
+                <i class="fa-solid fa-ban"></i>
+              </button>
+            </form>
+            {% else %}
+            <span style="font-size:0.75rem; color:var(--text-subtle);"><i class="fa-solid fa-lock"></i> Finalized</span>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" style="text-align:center; padding:2rem; color:var(--text-subtle);">
+          No purchase orders found. Click "Create Purchase Order" above to place vendor orders.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Create Purchase Order Modal -->
+<div class="modal-backdrop" id="createPoModal">
+  <div class="modal-box modal-lg">
+    <div class="modal-header">
+      <h3 style="font-weight:700;"><i class="fa-solid fa-truck-ramp-box" style="color:var(--primary);"></i> Create Supplier Purchase Order</h3>
+      <button type="button" onclick="closeModal('createPoModal')" style="background:none;border:none;font-size:1.1rem;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form action="{{ url_for('products.create_purchase_order') }}" method="POST">
+      <div class="modal-body">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+          <div class="form-group">
+            <label class="form-label">Vendor / Supplier</label>
+            <select name="supplier_id" class="form-control" required>
+              {% for s in suppliers %}
+                <option value="{{ s.id }}">{{ s.name }} ({{ s.contact_person }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Expected Delivery Date</label>
+            <input type="date" name="expected_delivery" class="form-control" required>
+          </div>
+        </div>
+
+        <div style="border:1px solid var(--border-color); border-radius:var(--radius-md); padding:1rem; margin-bottom:1rem; background:#F8FAFC;">
+          <h4 style="font-size:0.85rem; font-weight:700; margin-bottom:0.75rem; color:var(--text-main);">Order Item Details</h4>
+          <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:1rem;">
+            <div class="form-group">
+              <label class="form-label">Product to Replenish</label>
+              <select name="product_id" id="poProductSelect" class="form-control" required onchange="updateCost(this)">
+                {% for p in products %}
+                  <option value="{{ p.id }}" data-cost="{{ p.cost_price }}">{{ p.name }} (SKU: {{ p.sku }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Order Quantity (Units)</label>
+              <input type="number" name="quantity" class="form-control" value="100" min="1" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Unit Cost ($)</label>
+              <input type="number" step="0.01" name="unit_cost" id="poUnitCost" class="form-control" value="0.40" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Order Reference / Instructions</label>
+          <input type="text" name="notes" class="form-control" placeholder="e.g. Urgent restock for festival season, deliver to back dock">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('createPoModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-paper-plane"></i> Place Purchase Order
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function updateCost(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  const cost = opt.dataset.cost;
+  if (cost) {
+    document.getElementById('poUnitCost').value = cost;
+  }
+}
+</script>
+{% endblock %}

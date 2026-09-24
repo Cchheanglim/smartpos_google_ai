@@ -135,3 +135,101 @@ def barcodes():
     current_user = auth_manager.get_current_user()
     products = product_service.get_catalog()
     return render_template('products/barcodes.html', user=current_user, products=products)
+
+
+@product_bp.route('/purchase-orders')
+@login_required
+@permission_required('manage_products')
+def purchase_orders():
+    from ..repositories.po_repository import PORepository
+    po_repo = PORepository()
+    current_user = auth_manager.get_current_user()
+    pos = po_repo.get_all(50)
+    suppliers = po_repo.get_suppliers()
+    products = product_service.get_catalog()
+
+    return render_template(
+        'products/purchase_orders.html',
+        user=current_user,
+        purchase_orders=pos,
+        suppliers=suppliers,
+        products=products
+    )
+
+
+@product_bp.route('/purchase-orders/create', methods=['POST'])
+@login_required
+@permission_required('manage_products')
+def create_purchase_order():
+    from ..repositories.po_repository import PORepository
+    po_repo = PORepository()
+    current_user = auth_manager.get_current_user()
+
+    supplier_id = int(request.form.get('supplier_id', 1))
+    suppliers = {s['id']: s['name'] for s in po_repo.get_suppliers()}
+    supplier_name = suppliers.get(supplier_id, 'Supplier Partner')
+
+    product_id = int(request.form.get('product_id'))
+    quantity = max(1, int(request.form.get('quantity', 1)))
+    unit_cost = float(request.form.get('unit_cost', 0.50))
+    expected_delivery = request.form.get('expected_delivery', '')
+    notes = request.form.get('notes', '')
+
+    prod = product_service.product_repo.get_by_id(product_id)
+    prod_name = prod.name if prod else f"Product #{product_id}"
+
+    po_data = {
+        'supplier_id': supplier_id,
+        'supplier_name': supplier_name,
+        'status': 'ordered',
+        'expected_delivery': expected_delivery,
+        'notes': notes,
+        'created_by': current_user.id
+    }
+    items = [{
+        'product_id': product_id,
+        'product_name': prod_name,
+        'quantity': quantity,
+        'unit_cost': unit_cost,
+        'subtotal': round(quantity * unit_cost, 2)
+    }]
+
+    created_po = po_repo.create(po_data, items)
+    flash(f"Purchase Order {created_po['po_number']} placed with {supplier_name}.", 'success')
+
+    # Notify Telegram
+    try:
+        from ..services.telegram_service import telegram_service
+        telegram_service.notify_purchase_order(
+            po_code=created_po['po_number'],
+            supplier_name=supplier_name,
+            status='ORDERED',
+            total_items=quantity,
+            total_cost=round(quantity * unit_cost, 2)
+        )
+    except Exception:
+        pass
+
+    return redirect(url_for('products.purchase_orders'))
+
+
+@product_bp.route('/purchase-orders/<int:po_id>/status', methods=['POST'])
+@login_required
+@permission_required('manage_products')
+def update_po_status(po_id):
+    from ..repositories.po_repository import PORepository
+    po_repo = PORepository()
+    current_user = auth_manager.get_current_user()
+    new_status = request.form.get('status', 'received')
+
+    success = po_repo.update_status(po_id, new_status, current_user.id)
+    if success:
+        if new_status == 'received':
+            flash(f"PO items marked as RECEIVED! Live catalog inventory has been automatically incremented.", 'success')
+        else:
+            flash(f"PO status updated to '{new_status.upper()}'.", 'info')
+    else:
+        flash("Could not update PO status.", 'error')
+
+    return redirect(url_for('products.purchase_orders'))
+

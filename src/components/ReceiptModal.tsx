@@ -49,7 +49,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, onClose }) => 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '8px' }}>
             <MiniMartLogo size={42} withRing style={{ marginBottom: '6px' }} />
             <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '16px', color: 'var(--text-dark)' }}>
-              Mini Mart Store
+              SmartPOS Mini-Mart Store
             </div>
           </div>
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '11.5px', marginBottom: '10px' }}>

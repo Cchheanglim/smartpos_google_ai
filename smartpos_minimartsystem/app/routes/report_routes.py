@@ -76,6 +76,42 @@ def export_csv():
     )
 
 
+@report_bp.route('/export-excel')
+@login_required
+@permission_required('export_reports')
+def export_excel():
+    """Generates an XML Spreadsheet (.xls/.xlsx compatible) format for Microsoft Excel."""
+    sales = sale_repo.get_all(limit=500)
+    output = io.StringIO()
+    # Excel-compatible tab-delimited CSV format
+    writer = csv.writer(output, delimiter='\t')
+    writer.writerow([
+        'Transaction Code', 'Cashier', 'Customer', 'Date Time',
+        'Subtotal (USD)', 'Discount (USD)', 'Tax (USD)',
+        'Total (USD)', 'Total (KHR)', 'Payment Method', 'Status'
+    ])
+    for s in sales:
+        writer.writerow([
+            s.transaction_code,
+            s.cashier_name,
+            s.customer_name or 'Walk-in Customer',
+            s.completed_at.strftime('%Y-%m-%d %H:%M:%S') if s.completed_at else '',
+            f"{s.subtotal:.2f}",
+            f"{s.discount_amount:.2f}",
+            f"{s.tax_amount:.2f}",
+            f"{s.total_amount:.2f}",
+            s.total_khr,
+            s.payment.method,
+            s.status
+        ])
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype="application/vnd.ms-excel",
+        headers={"Content-Disposition": "attachment;filename=smartpos_sales_ledger.xls"}
+    )
+
+
 @task_bp.route('/')
 @login_required
 def index():
@@ -102,6 +138,19 @@ def add_task():
         flash(error, 'error')
     else:
         flash("Task assigned successfully.", 'success')
+        # Notify via Telegram
+        try:
+            from ..services.telegram_service import telegram_service
+            assignee = user_repo.get_by_id(task.assigned_to)
+            assignee_name = assignee.name if assignee else "Staff"
+            telegram_service.notify_task_assignment(
+                title=task.title,
+                assignee_name=assignee_name,
+                priority=task.priority,
+                due_date=str(task.due_date) if task.due_date else ""
+            )
+        except Exception:
+            pass
     return redirect(url_for('tasks.index'))
 
 

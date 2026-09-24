@@ -51,6 +51,10 @@
           <i class="fa-solid fa-boxes-stacked"></i>
           <span>Inventory Products</span>
         </a>
+        <a href="{{ url_for('products.purchase_orders') }}" class="nav-item {% if request.path.startswith('/products/purchase-orders') %}active{% endif %}">
+          <i class="fa-solid fa-truck-ramp-box"></i>
+          <span>Purchase Orders</span>
+        </a>
         <a href="{{ url_for('products.barcodes') }}" class="nav-item {% if request.path.startswith('/products/barcodes') %}active{% endif %}">
           <i class="fa-solid fa-barcode"></i>
           <span>Barcode Labels</span>
@@ -109,6 +113,11 @@
           </div>
 
           <!-- Shift Status Quick Actions -->
+          <button type="button" class="btn btn-secondary" onclick="openModal('telegramModal')" style="display:flex; align-items:center; gap:0.4rem;">
+            <i class="fa-brands fa-telegram" style="color:#0088cc; font-size:1.1rem;"></i>
+            <span>Telegram Bot</span>
+          </button>
+
           <button type="button" class="btn btn-secondary" onclick="openModal('shiftModal')">
             <i class="fa-solid fa-clock"></i>
             <span>Punch Clock</span>
@@ -189,6 +198,113 @@
       </div>
     </div>
   </div>
+
+  <!-- Telegram Bot Integration Modal -->
+  <div class="modal-backdrop" id="telegramModal">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <h3 style="font-weight:700; display:flex; align-items:center; gap:0.5rem;">
+          <i class="fa-brands fa-telegram" style="color:#0088cc; font-size:1.4rem;"></i>
+          <span>Telegram Automation & Alerts Center</span>
+        </h3>
+        <button type="button" onclick="closeModal('telegramModal')" style="background:none;border:none;font-size:1.1rem;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div style="background:#F0F9FF; border:1px solid #BAE6FD; border-radius:var(--radius-md); padding:1rem; margin-bottom:1.25rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight:700; color:#0369A1; font-size:0.95rem;">Automated Store Alerts</div>
+              <p style="font-size:0.8rem; color:#0284C7; margin-top:2px;">
+                Instant push notifications for POS Checkouts, Low Stock, Shift Floats, Refunds, PO Restocks, and Staff Tasks.
+              </p>
+            </div>
+            <button type="button" id="sendTgTestBtn" class="btn btn-primary" onclick="testTelegramIntegration()">
+              <i class="fa-solid fa-paper-plane"></i> Send Test Alert
+            </button>
+          </div>
+          <div id="tgTestResult" style="margin-top:0.75rem; font-size:0.8rem; display:none;"></div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem;">
+          <div>
+            <h4 style="font-size:0.85rem; font-weight:700; margin-bottom:0.6rem; color:var(--text-main);">
+              <i class="fa-solid fa-key" style="color:var(--primary); margin-right:4px;"></i> Configuration in <code>.env</code>
+            </h4>
+            <div style="background:#0F172A; color:#E2E8F0; padding:0.85rem; border-radius:var(--radius-sm); font-family:monospace; font-size:0.75rem; line-height:1.6;">
+              <span style="color:#64748B;"># Enter your keys in smartpos_minimartsystem/.env</span><br>
+              <span style="color:#38BDF8;">TELEGRAM_BOT_TOKEN</span>=<span style="color:#A7F3D0;">your_token_here</span><br>
+              <span style="color:#38BDF8;">TELEGRAM_CHAT_ID</span>=<span style="color:#A7F3D0;">your_chat_id_here</span>
+            </div>
+            <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.5rem;">
+              Create your bot with <strong>@BotFather</strong> and get your Chat ID with <strong>@userinfobot</strong>.
+            </p>
+          </div>
+
+          <div>
+            <h4 style="font-size:0.85rem; font-weight:700; margin-bottom:0.6rem; color:var(--text-main);">
+              <i class="fa-solid fa-terminal" style="color:var(--primary); margin-right:4px;"></i> Interactive Commands
+            </h4>
+            <div style="display:flex; flex-direction:column; gap:0.4rem; font-size:0.8rem;">
+              <div style="display:flex; justify-content:space-between; padding:0.35rem 0.5rem; background:#F8FAFC; border-radius:4px;">
+                <code style="color:var(--primary); font-weight:700;">/summary</code>
+                <span style="color:var(--text-muted);">Executive sales & revenue snapshot</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; padding:0.35rem 0.5rem; background:#F8FAFC; border-radius:4px;">
+                <code style="color:var(--primary); font-weight:700;">/sales</code>
+                <span style="color:var(--text-muted);">Last 5 completed transactions</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; padding:0.35rem 0.5rem; background:#F8FAFC; border-radius:4px;">
+                <code style="color:var(--primary); font-weight:700;">/lowstock</code>
+                <span style="color:var(--text-muted);">Critical catalog items below threshold</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; padding:0.35rem 0.5rem; background:#F8FAFC; border-radius:4px;">
+                <code style="color:var(--primary); font-weight:700;">/shifts</code>
+                <span style="color:var(--text-muted);">Active drawer cash floats & staff</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; padding:0.35rem 0.5rem; background:#F8FAFC; border-radius:4px;">
+                <code style="color:var(--primary); font-weight:700;">/tasks</code>
+                <span style="color:var(--text-muted);">Pending operational store duties</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('telegramModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  async function testTelegramIntegration() {
+    const btn = document.getElementById('sendTgTestBtn');
+    const res = document.getElementById('tgTestResult');
+    if (!btn || !res) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Dispatching...';
+    res.style.display = 'block';
+    res.innerHTML = '<span style="color:#0284C7;">Sending diagnostic alert to Telegram...</span>';
+
+    try {
+      const resp = await fetch('/api/telegram-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await resp.json();
+      if (data.success) {
+        res.innerHTML = '<span style="color:#059669; font-weight:700;"><i class="fa-solid fa-circle-check"></i> ' + data.message + '</span>';
+      } else {
+        res.innerHTML = '<span style="color:#DC2626; font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> ' + (data.error || 'Failed to dispatch alert.') + '</span>';
+      }
+    } catch (e) {
+      res.innerHTML = '<span style="color:#DC2626;">Network error communicating with SmartPOS backend.</span>';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send Test Alert';
+    }
+  }
+  </script>
 
   <!-- Scripts -->
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>

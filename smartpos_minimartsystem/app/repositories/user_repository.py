@@ -138,6 +138,16 @@ class UserRepository(BaseRepository[User]):
         self.db.execute_non_query(query, (entity_id,))
         return True
 
+    def reactivate(self, entity_id: int) -> bool:
+        query = "UPDATE users SET is_active = 1 WHERE id = %s;"
+        self.db.execute_non_query(query, (entity_id,))
+        return True
+
+    def reset_password(self, user_id: int, new_password_hash: str) -> bool:
+        query = "UPDATE users SET password_hash = %s WHERE id = %s;"
+        self.db.execute_non_query(query, (new_password_hash, user_id))
+        return True
+
     def update_role(self, user_id: int, new_role_id: int) -> bool:
         query = "UPDATE users SET role_id = %s WHERE id = %s;"
         self.db.execute_non_query(query, (new_role_id, user_id))

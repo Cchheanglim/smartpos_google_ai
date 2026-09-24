@@ -56,10 +56,11 @@ export const LoginView: React.FC = () => {
               letterSpacing: '-0.3px',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '8px'
             }}
           >
-            Mini Mart
+            SmartPOS <span style={{ fontSize: '12px', background: 'var(--primary)', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>PRO</span>
           </h1>
           <p
             className="subtitle"
@@ -233,7 +234,7 @@ export const LoginView: React.FC = () => {
         </form>
 
         <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '11.5px', color: 'var(--text-muted)' }}>
-          Powered by Mini Mart POS &bull; Terminal ready
+          Powered by SmartPOS Enterprise &bull; Terminal ready
         </div>
       </div>
 
