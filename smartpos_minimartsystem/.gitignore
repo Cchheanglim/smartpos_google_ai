@@ -1,6 +1,14 @@
-*.pyc
-.env
-.pytest_cache/
+# Ignore local configuration and generated files
+*.py[cod]
 __pycache__/
-backups/
+.pytest_cache/
+
+# Environment files may contain database passwords, Flask secrets, and API tokens.
+.env
+.env.*
+!.env.example
+
+# Local development and generated data
 venv/
+.venv/
+backups/
