@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if page.user else 'Add' }} staff{% endblock %}
+{% block page_title %}Staff Management{% endblock %}
+{% block content %}
+{% set u = page.user %}
+<a class="muted small" href="{{ url_for('staff.list_staff') }}"><i class="fa-solid fa-arrow-left"></i> All staff</a>
+<h1 style="margin-top:6px;">{{ 'Edit ' ~ u.name if u else 'Add a staff member' }}</h1>
+<div class="grid-2">
+  <div class="card">
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-row">
+        <div><label for="name">Full name *</label><input id="name" name="name" maxlength="100" required value="{{ form.get('name') or (u.name if u else '') }}"></div>
+        <div><label for="phone">Phone</label><input id="phone" name="phone" maxlength="20" value="{{ form.get('phone') or (u.phone if u and u.phone else '') }}"></div>
+      </div>
+      <label for="email">Email (login) *</label><input id="email" name="email" type="email" maxlength="120" required value="{{ form.get('email') or (u.email if u else '') }}">
+      <label for="role_id">Role *</label>
+      <select id="role_id" name="role_id" required>
+        {% set chosen = (form.get('role_id') or (u.role_id if u else ''))|string %}
+        <option value="">— Choose a role —</option>
+        {% for r in page.roles %}<option value="{{ r.id }}" {{ 'selected' if chosen == r.id|string }}>{{ r.display_name }} — {{ r.description }}</option>{% endfor %}
+      </select>
+      <label for="shift_id">Shift</label>
+      <select id="shift_id" name="shift_id">
+        <option value="">— Not assigned —</option>
+        {% set chosen_shift = (form.get('shift_id') or (u.shift_id if u and u.shift_id else ''))|string %}
+        {% for sh in page.shifts %}<option value="{{ sh.id }}" {{ 'selected' if chosen_shift == sh.id|string }}>{{ sh }}</option>{% endfor %}
+      </select>
+      {% if not u %}
+        <label for="password">Initial password *</label>
+        <input id="password" name="password" type="password" minlength="8" required>
+        <div class="muted small">At least 8 characters with letters and numbers.</div>
+      {% else %}
+        <p class="small muted" style="margin-top:10px;">To deactivate or reactivate this account, use the buttons on the staff list.</p>
+      {% endif %}
+      <div style="margin-top:18px;display:flex;gap:10px;">
+        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ 'Save changes' if u else 'Create account' }}</button>
+        <a class="btn btn-secondary" href="{{ url_for('staff.list_staff') }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+  {% if u %}
+  <div class="card">
+    {% if 'admin_reset_password' in permissions %}
+    <h2 class="mt-0"><i class="fa-solid fa-key" style="color:var(--primary)"></i> Reset password</h2>
+    <p class="muted small">Sets a new password for {{ u.name }}. Share it with them securely.</p>
+    <form method="post" action="{{ url_for('staff.reset_password', user_id=u.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="new_password">New password</label>
+      <input id="new_password" name="new_password" type="password" minlength="8" required>
+      <button class="btn btn-danger" type="submit" style="margin-top:14px;"><i class="fa-solid fa-rotate"></i> Reset password</button>
+    </form>
+    {% endif %}
+    {% if u.avatar_filename and 'manage_users' in permissions %}
+    <h2 style="margin-top:20px;"><i class="fa-solid fa-image" style="color:var(--primary)"></i> Profile picture moderation</h2>
+    <form method="post" action="{{ url_for('staff.remove_avatar', user_id=u.id) }}" onsubmit="return confirm('Remove this profile picture?')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-trash"></i> Remove picture</button>
+    </form>
+    {% endif %}
+    {% if 'manage_roles' in permissions and u.id != current_user.id %}
+    <h2 style="margin-top:20px;"><i class="fa-solid fa-user-lock" style="color:var(--primary)"></i> Individual permission overrides</h2>
+    <p class="muted small">Grant extra permissions to {{ u.name }} on top of their role.</p>
+    <form method="post" action="{{ url_for('staff.set_overrides', user_id=u.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% for p in page.permissions %}
+        {% if p.name not in page.role_permissions %}
+        <label style="display:flex;gap:8px;align-items:center;color:var(--text-dark);font-weight:400;">
+          <input type="checkbox" name="extra_perm" value="{{ p.id }}" {{ 'checked' if p.name in page.overrides }}> {{ p.display_name }}</label>
+        {% endif %}
+      {% endfor %}
+      <button class="btn btn-secondary" type="submit" style="margin-top:10px;">Save overrides</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

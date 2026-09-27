@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Sales history{% endblock %}
+{% block page_title %}Sales History{% endblock %}
+{% block content %}
+{% set f = page.filters %}
+<h1>Sales history</h1>
+<p class="subtitle">{{ 'Showing only your own transactions.' if page.own_only else 'All transactions across every cashier.' }}
+  {{ page.sales|length }} result{{ '' if page.sales|length == 1 else 's' }} · net {{ page.total|money }}</p>
+<div class="card">
+  <form method="get" class="toolbar">
+    <div style="flex:2;"><label for="q">Search</label><input id="q" name="q" value="{{ f.term }}" placeholder="Receipt #, customer, phone or cashier"></div>
+    <div><label for="start">From</label><input id="start" name="start" type="date" value="{{ f.start or '' }}"></div>
+    <div><label for="end">To</label><input id="end" name="end" type="date" value="{{ f.end or '' }}"></div>
+    <div><label for="payment_method">Payment</label>
+      <select id="payment_method" name="payment_method"><option value="">Any</option>
+        {% for m in page.payment_methods %}<option value="{{ m.value }}" {{ 'selected' if f.payment_method == m.value }}>{{ m.label }}</option>{% endfor %}
+      </select></div>
+    {% if not page.own_only %}
+    <div><label for="cashier_id">Cashier</label>
+      <select id="cashier_id" name="cashier_id"><option value="">Any</option>
+        {% for u in page.cashiers %}<option value="{{ u.id }}" {{ 'selected' if f.cashier_id == u.id }}>{{ u.name }}</option>{% endfor %}
+      </select></div>
+    {% endif %}
+    <div style="flex:0;min-width:auto;display:flex;gap:6px;">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter"></i> Filter</button>
+      <a class="btn btn-secondary" href="{{ url_for('sales.history') }}">Reset</a>
+    </div>
+  </form>
+  <div class="table-responsive mt-16">
+  <table>
+    <thead><tr><th>Receipt</th><th>Date</th><th>Cashier</th><th>Customer</th><th>Payment</th><th>Status</th><th class="text-right">Total</th><th></th></tr></thead>
+    <tbody>
+    {% for s in page.sales %}
+      <tr>
+        <td><strong>{{ s.receipt_number }}</strong></td>
+        <td class="muted small">{{ s.created_at|dt }}</td>
+        <td>{{ s.cashier_name }}</td>
+        <td>{{ s.customer_name or '—' }}</td>
+        <td><i class="fa-solid {{ s.payment_method.icon }}"></i> {{ s.payment_method.label }}</td>
+        <td>{% if s.refunded_amount > 0 %}<span class="badge badge-warn">Refunded {{ s.refunded_amount|money }}</span>{% else %}<span class="badge badge-ok">Completed</span>{% endif %}</td>
+        <td class="text-right"><strong>{{ s.total_amount|money }}</strong></td>
+        <td><div class="icon-actions">
+          <a href="{{ url_for('sales.receipt', sale_id=s.id) }}" title="Receipt"><i class="fa-solid fa-receipt"></i></a>
+          {% if 'process_refund' in permissions %}<a href="{{ url_for('sales.refund', sale_id=s.id) }}" title="Refund"><i class="fa-solid fa-rotate-left"></i></a>{% endif %}
+        </div></td>
+      </tr>
+    {% else %}<tr><td colspan="8" class="empty">No sales found.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

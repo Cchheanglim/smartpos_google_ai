@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Switch user · {{ store_name }} POS</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card">
+    <div style="text-align:center;margin-bottom:22px;">
+      <i class="fa-solid fa-right-left" style="font-size:36px;color:var(--primary);"></i>
+      <h2 style="margin:10px 0 2px;">Switch user</h2>
+      <p class="subtitle" style="margin:0;">Hand this terminal to a colleague without logging {{ current_user.name }} all the way out.</p>
+    </div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+    <form method="post" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="user_id">Who is taking over?</label>
+      <select id="user_id" name="user_id" required>
+        <option value="">— Choose —</option>
+        {% for u in switchable %}<option value="{{ u.id }}">{{ u.name }} — {{ u.role_display_name }}</option>{% endfor %}
+      </select>
+      <label for="password">Their password</label>
+      <input id="password" name="password" type="password" required autofocus>
+      <button type="submit" class="btn btn-primary" style="width:100%;margin-top:16px;padding:12px;">
+        <i class="fa-solid fa-right-left"></i> Switch
+      </button>
+    </form>
+    <div class="muted small" style="margin-top:18px;border-top:1px solid var(--border-color);padding-top:12px;text-align:center;">
+      <a href="{{ url_for('dashboard.index') }}">Cancel — back to {{ current_user.name }}'s session</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,76 @@
+{# Reusable Jinja2 macros #}
+{% macro avatar(user, size='') -%}
+  {% if user.avatar_filename %}
+    <img class="avatar {{ size }}" src="{{ url_for('static', filename='uploads/avatars/' ~ user.avatar_filename) }}" alt="{{ user.name }}">
+  {%- else -%}
+    <span class="avatar {{ size }}">{{ user.initials }}</span>
+  {%- endif %}
+{%- endmacro %}
+
+{% macro product_thumb(product) -%}
+  <span class="thumb">
+    <i class="fa-solid {{ product.icon }}"></i>
+    {%- if product.image_src -%}
+      <img src="{{ product.image_src }}" alt="" loading="lazy" onerror="this.remove()">
+    {%- elif product.is_local_image -%}
+      <img src="{{ url_for('static', filename='uploads/products/' ~ product.image_filename) }}" alt="" onerror="this.remove()">
+    {%- endif -%}
+  </span>
+{%- endmacro %}
+
+{% macro stock_badge(product) -%}
+  {% if product.status.name == 'OUT' %}<span class="badge badge-low">Out of stock</span>
+  {% elif product.status.name == 'LOW' %}<span class="badge badge-warn">Low · {{ product.quantity_in_stock }}</span>
+  {% else %}<span class="badge badge-ok">{{ product.quantity_in_stock }} in stock</span>{% endif %}
+{%- endmacro %}
+
+{% macro csrf() -%}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{%- endmacro %}
+
+{% macro delete_button(action, label, message) -%}
+  <form method="post" action="{{ action }}" class="inline-form" onsubmit="return confirm({{ message|tojson }});">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="danger" title="{{ label }}"><i class="fa-solid fa-trash"></i></button>
+  </form>
+{%- endmacro %}
+
+{% macro pagination(page, endpoint) -%}
+  {% if page.pages > 1 %}
+  <div class="pagination">
+    {% set args = request.args.to_dict() %}
+    {% for n in range(1, page.pages + 1) %}
+      {% if n == page.filter.page %}<span class="current">{{ n }}</span>
+      {% else %}{% set _ = args.update({'page': n}) %}<a href="{{ url_for(endpoint, **args) }}">{{ n }}</a>{% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+{%- endmacro %}
+
+{% macro bar_list(rows, money_label=true, lime=false) -%}
+  {% if rows %}
+  <div class="bars">
+    {% for r in rows %}
+    <div class="bar-row">
+      <span title="{{ r.label }}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.label }}</span>
+      <div class="bar-track"><div class="bar-fill {{ 'lime' if lime }}" style="width: {{ r.percent }}%"></div></div>
+      <span class="text-right">{% if money_label %}{{ r.amount|money }}{% else %}{{ r.quantity }} sold{% endif %}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}<div class="empty">No data for this period.</div>{% endif %}
+{%- endmacro %}
+
+{% macro khr_amount(usd) -%}
+  {{ (usd * khr_rate) | round | int | khr }}
+{%- endmacro %}
+
+{% macro priority_badge(priority) -%}
+  <span class="badge {{ priority.css }}">{{ priority.label }}</span>
+{%- endmacro %}
+
+{% macro status_pill(status) -%}
+  <span class="badge {{ 'badge-ok' if status.value in ('completed','received','balanced') else
+                        'badge-warn' if status.value in ('in_progress','ordered') else
+                        'badge-low' if status.value in ('cancelled',) else 'badge-muted' }}">{{ status.label }}</span>
+{%- endmacro %}

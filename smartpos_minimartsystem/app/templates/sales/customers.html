@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import delete_button %}
+{% block title %}Loyalty customers{% endblock %}
+{% block page_title %}Loyalty Customers{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Loyalty customers</h1>
+    <p class="subtitle">1 point per $1 spent · Silver 100 pts (3%) · Gold 300 pts (5%) · VIP 500 pts (10%)</p></div>
+  <div class="actions"><a class="btn btn-primary" href="{{ url_for('customers.create_customer') }}"><i class="fa-solid fa-user-plus"></i> Register member</a></div>
+</div>
+<div class="card">
+  <form method="get" class="toolbar">
+    <div style="flex:2;"><label for="q">Search</label><input id="q" name="q" value="{{ page.term }}" placeholder="Name or phone"></div>
+    <div><label for="tier">Tier</label><select id="tier" name="tier"><option value="">All tiers</option>
+      {% for t in page.tiers %}<option value="{{ t.name }}" {{ 'selected' if page.tier == t.name }}>{{ t.label }}</option>{% endfor %}</select></div>
+    <div style="flex:0;min-width:auto;"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter"></i> Filter</button></div>
+  </form>
+  <div class="table-responsive mt-16">
+  <table>
+    <thead><tr><th>Member</th><th>Phone</th><th>Tier</th><th class="text-right">Points</th><th class="text-right">Total spent</th><th>Notes</th><th></th></tr></thead>
+    <tbody>
+    {% for c in page.customers %}
+      <tr>
+        <td><strong>{{ c.name }}</strong><div class="muted small">since {{ c.created_at|dt }}</div></td>
+        <td>{{ c.masked_phone }}</td>
+        <td><span class="badge tier-{{ c.tier.label }}">{{ c.tier.label }} · {{ c.discount_percent }}%</span></td>
+        <td class="text-right">{{ c.points }}</td>
+        <td class="text-right">{{ c.total_spent|money }}</td>
+        <td class="small muted">{{ c.notes }}</td>
+        <td><div class="icon-actions">
+          <a href="{{ url_for('customers.edit_customer', customer_id=c.id) }}" title="Edit"><i class="fa-solid fa-pen"></i></a>
+          {% if 'delete_customers' in permissions %}{{ delete_button(url_for('customers.delete_customer', customer_id=c.id), 'Delete', 'Remove ' ~ c.name ~ ' from the loyalty program?') }}{% endif %}
+        </div></td>
+      </tr>
+    {% else %}<tr><td colspan="7" class="empty">No members found.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

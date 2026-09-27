@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import stock_badge, product_thumb, pagination %}
+{% block title %}Products{% endblock %}
+{% block page_title %}Products &amp; Stock{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Products &amp; Stock</h1>
+    <p class="subtitle">{{ page.total }} product{{ '' if page.total == 1 else 's' }} match your filters.</p>
+  </div>
+  <div class="actions">
+    {% if 'manage_categories' in permissions %}<a class="btn btn-secondary" href="{{ url_for('categories.list_categories') }}"><i class="fa-solid fa-tags"></i> Categories</a>{% endif %}
+    {% if 'adjust_stock' in permissions %}<a class="btn btn-secondary" href="{{ url_for('products.movements') }}"><i class="fa-solid fa-list"></i> Stock ledger</a>{% endif %}
+    {% if 'print_barcodes' in permissions %}<a class="btn btn-secondary" href="{{ url_for('products.barcodes') }}"><i class="fa-solid fa-barcode"></i> Barcode sheet</a>{% endif %}
+    {% if 'manage_products' in permissions %}<a class="btn btn-primary" href="{{ url_for('products.create_product') }}"><i class="fa-solid fa-plus"></i> Add product</a>{% endif %}
+  </div>
+</div>
+
+<div class="card-grid">
+  <div class="stat-card"><div class="stat-label"><i class="fa-solid fa-box"></i>Catalog</div><div class="stat-value">{{ page.totals.products or 0 }}</div></div>
+  <div class="stat-card"><div class="stat-label"><i class="fa-solid fa-cubes"></i>Units on hand</div><div class="stat-value">{{ page.totals.units or 0 }}</div></div>
+  {% if 'view_cost_prices' in permissions %}
+  <div class="stat-card"><div class="stat-label"><i class="fa-solid fa-warehouse"></i>Stock value (cost)</div><div class="stat-value">{{ page.totals.cost_value|money }}</div></div>
+  {% endif %}
+  <a class="stat-card" style="text-decoration:none;border-top-color:var(--danger);" href="{{ url_for('products.list_products', stock='low') }}"><div class="stat-label"><i class="fa-solid fa-triangle-exclamation"></i>Low stock</div><div class="stat-value">{{ page.totals.low_stock or 0 }}</div></a>
+</div>
+
+<div class="card">
+  <form method="get" class="toolbar">
+    <div style="flex:2;"><label for="q">Search</label><input id="q" name="q" value="{{ page.filter.search }}" placeholder="Name or SKU…"></div>
+    <div><label for="category_id">Category</label>
+      <select id="category_id" name="category_id">
+        <option value="">All categories</option>
+        {% for c in page.categories %}<option value="{{ c.id }}" {{ 'selected' if page.filter.category_id == c.id }}>{{ c.name }}</option>{% endfor %}
+      </select></div>
+    <div><label for="supplier_id">Supplier</label>
+      <select id="supplier_id" name="supplier_id">
+        <option value="">All suppliers</option>
+        {% for s in page.suppliers %}<option value="{{ s.id }}" {{ 'selected' if page.filter.supplier_id == s.id }}>{{ s.name }}</option>{% endfor %}
+      </select></div>
+    <div><label for="stock">Stock</label>
+      <select id="stock" name="stock">
+        <option value="">Any level</option>
+        <option value="low" {{ 'selected' if page.filter.stock == 'low' }}>Low stock</option>
+        <option value="out" {{ 'selected' if page.filter.stock == 'out' }}>Out of stock</option>
+      </select></div>
+    <div><label for="sort">Sort by</label>
+      <select id="sort" name="sort">
+        {% for key, label in [('name','Name A–Z'),('sku','SKU'),('price_asc','Price ↑'),('price_desc','Price ↓'),('stock_asc','Stock ↑'),('newest','Newest')] %}
+        <option value="{{ key }}" {{ 'selected' if page.filter.sort == key }}>{{ label }}</option>{% endfor %}
+      </select></div>
+    <div style="flex:0;min-width:auto;display:flex;gap:6px;">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Filter</button>
+      <a class="btn btn-secondary" href="{{ url_for('products.list_products') }}">Reset</a>
+    </div>
+  </form>
+
+  <div class="table-responsive mt-16">
+    <table>
+      <thead><tr>
+        <th></th><th>Product</th><th>Category</th><th class="text-right">Price</th>
+        {% if 'view_cost_prices' in permissions %}<th class="text-right">Cost</th><th class="text-right">Margin</th>{% endif %}
+        <th>Stock</th><th></th>
+      </tr></thead>
+      <tbody>
+      {% for p in page.products %}
+        <tr>
+          <td style="width:56px;">{{ product_thumb(p) }}</td>
+          <td><a href="{{ url_for('products.view_product', product_id=p.id) }}"><strong>{{ p.name }}</strong></a><div class="muted small">{{ p.sku }}{% if p.supplier_name %} · {{ p.supplier_name }}{% endif %}</div></td>
+          <td>{% if p.category_name %}<span class="badge badge-violet"><i class="fa-solid {{ p.icon }}"></i> {{ p.category_name }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td class="text-right">{{ p.price|money }}</td>
+          {% if 'view_cost_prices' in permissions %}
+          <td class="text-right muted">{{ p.cost|money }}</td>
+          <td class="text-right">{{ p.margin_percent }}%</td>
+          {% endif %}
+          <td>{{ stock_badge(p) }}</td>
+          <td>
+            <div class="icon-actions">
+              <a href="{{ url_for('products.view_product', product_id=p.id) }}" title="View &amp; adjust stock"><i class="fa-solid fa-eye"></i></a>
+              {% if 'manage_products' in permissions %}<a href="{{ url_for('products.edit_product', product_id=p.id) }}" title="Edit"><i class="fa-solid fa-pen"></i></a>{% endif %}
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8" class="empty"><i class="fa-solid fa-box-open"></i> No products found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(page, 'products.list_products') }}
+</div>
+{% endblock %}

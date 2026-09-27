@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if page.customer else 'Register' }} member{% endblock %}
+{% block page_title %}Loyalty Customers{% endblock %}
+{% block content %}
+{% set c = page.customer %}
+<h1>{{ 'Edit ' ~ c.name if c else 'Register a loyalty member' }}</h1>
+<div class="card" style="max-width:620px;">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="return_to" value="{{ request.args.get('return_to', '') }}">
+    <div class="form-row">
+      <div><label for="name">Full name *</label><input id="name" name="name" maxlength="100" required value="{{ form.get('name') or (c.name if c else '') }}"></div>
+      <div><label for="phone">Phone *</label><input id="phone" name="phone" maxlength="20" required placeholder="012345678" value="{{ form.get('phone') or (c.phone if c else '') }}"></div>
+    </div>
+    {% if c %}
+    <label for="points">Loyalty points {% if 'adjust_loyalty_points' not in permissions %}<span class="muted">(read-only for your role)</span>{% endif %}</label>
+    <input id="points" name="points" type="number" min="0" value="{{ c.points }}" {{ '' if 'adjust_loyalty_points' in permissions else 'readonly' }}>
+    <p class="muted small">Current tier: {{ c.tier.label }} ({{ c.discount_percent }}% member discount)</p>
+    {% endif %}
+    <label for="notes">Notes</label><input id="notes" name="notes" maxlength="255" value="{{ form.get('notes') or (c.notes if c else '') }}">
+    <div style="margin-top:16px;display:flex;gap:10px;">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ 'Save' if c else 'Register' }}</button>
+      <a class="btn btn-secondary" href="{{ url_for('customers.list_customers') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

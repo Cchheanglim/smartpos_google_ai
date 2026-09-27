@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import stock_badge, product_thumb %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+<h1>Hello, {{ current_user.name.split(' ')[0] }} 👋</h1>
+<p class="subtitle">{{ current_user.role_display_name }} · here's what's happening in {{ store_name }} today.</p>
+
+<div class="card-grid">
+  <div class="stat-card">
+    <div class="stat-label"><i class="fa-solid fa-receipt"></i>{{ 'Sales today' if data.sees_all_sales else 'My sales today' }}</div>
+    <div class="stat-value">{{ data.today.transactions or 0 }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label"><i class="fa-solid fa-sack-dollar"></i>{{ 'Revenue today' if data.sees_all_sales else 'My revenue today' }}</div>
+    <div class="stat-value">{{ data.today.revenue|money }}</div>
+    <div class="muted small">≈ {{ data.today.revenue|khr }}</div>
+  </div>
+  {% if data.sees_inventory %}
+  <a class="stat-card" href="{{ url_for('products.list_products') }}" style="text-decoration:none;">
+    <div class="stat-label"><i class="fa-solid fa-boxes-stacked"></i>Products</div>
+    <div class="stat-value">{{ data.inventory.products or 0 }}</div>
+    <div class="muted small">{{ data.inventory.units or 0 }} units on hand</div>
+  </a>
+  <a class="stat-card" href="{{ url_for('products.list_products', stock='low') }}" style="text-decoration:none;border-top-color:var(--danger);">
+    <div class="stat-label"><i class="fa-solid fa-triangle-exclamation"></i>Low / out of stock</div>
+    <div class="stat-value">{{ data.inventory.low_stock or 0 }}</div>
+  </a>
+  {% endif %}
+  {% if data.sees_all_sales %}
+  <div class="stat-card">
+    <div class="stat-label"><i class="fa-solid fa-chart-pie"></i>Net profit (7d)</div>
+    <div class="stat-value">{{ data.kpis.net_profit|money }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label"><i class="fa-solid fa-cash-register"></i>Avg. basket (7d)</div>
+    <div class="stat-value">{{ data.kpis.average_basket|money }}</div>
+  </div>
+  {% endif %}
+  {% if data.open_shifts is defined and data.open_shifts %}
+  <a class="stat-card" href="{{ url_for('attendance.audit') }}" style="text-decoration:none;">
+    <div class="stat-label"><i class="fa-solid fa-vault"></i>Cash in open drawers</div>
+    <div class="stat-value">{{ data.cash_in_drawers|money }}</div>
+    <div class="muted small">{{ data.open_shifts|length }} register{{ '' if data.open_shifts|length == 1 else 's' }} open</div>
+  </a>
+  {% endif %}
+</div>
+
+<div class="grid-2">
+  {% if data.recent_sales %}
+  <div class="card">
+    <div class="page-head"><h2 class="mt-0">Recent sales</h2><a class="btn btn-secondary btn-sm" href="{{ url_for('sales.history') }}">View all</a></div>
+    <table>
+      <thead><tr><th>Receipt</th><th>Time</th><th>Cashier</th><th class="text-right">Total</th></tr></thead>
+      <tbody>
+      {% for s in data.recent_sales %}
+        <tr>
+          <td><a href="{{ url_for('sales.receipt', sale_id=s.id) }}">{{ s.receipt_number }}</a></td>
+          <td class="muted">{{ s.created_at|dt }}</td>
+          <td>{{ s.cashier_name }}</td>
+          <td class="text-right">{{ s.total_amount|money }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if data.sees_inventory %}
+  <div class="card">
+    <div class="page-head"><h2 class="mt-0">Needs restocking</h2><a class="btn btn-secondary btn-sm" href="{{ url_for('products.list_products', stock='low') }}">See all</a></div>
+    {% if data.low_stock %}
+    <table>
+      <tbody>
+      {% for p in data.low_stock %}
+        <tr>
+          <td style="width:52px;">{{ product_thumb(p) }}</td>
+          <td><a href="{{ url_for('products.view_product', product_id=p.id) }}">{{ p.name }}</a><div class="muted small">{{ p.sku }} · min {{ p.low_stock_threshold }}</div></td>
+          <td class="text-right">{{ stock_badge(p) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<div class="empty"><i class="fa-solid fa-circle-check"></i> Every product is above its threshold.</div>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2 class="mt-0">Latest stock movements</h2>
+    <table>
+      <tbody>
+      {% for m in data.movements %}
+        <tr>
+          <td>{{ m.product_name }}<div class="muted small">{{ m.reason.label }} · {{ m.created_by_name }}</div></td>
+          <td class="muted small">{{ m.created_at|dt }}</td>
+          <td class="text-right {{ 'text-success' if m.is_inbound else 'text-danger' }}">{{ '%+d'|format(m.change_amount) }}</td>
+        </tr>
+      {% else %}<tr><td class="empty">No movements yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if data.my_shift or data.my_open_tasks %}
+  <div class="card">
+    <h2 class="mt-0">My shift &amp; tasks</h2>
+    {% if data.my_shift %}
+    <p class="small">Clocked in since {{ data.my_shift.clock_in|dt }} · drawer balance {{ data.my_shift.drawer_balance|money }}</p>
+    {% else %}
+    <p class="small muted">You are not clocked in.</p>
+    {% endif %}
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('attendance.my_shift') }}">Manage shift</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('tasks.board') }}">Tasks ({{ data.my_open_tasks }} open)</a>
+  </div>
+  {% endif %}
+
+  {% if 'process_sale' in permissions %}
+  <div class="card">
+    <h2 class="mt-0">Quick actions</h2>
+    <div class="actions" style="display:flex;gap:10px;flex-wrap:wrap;">
+      <a class="btn btn-lime" href="{{ url_for('checkout.index') }}"><i class="fa-solid fa-cart-shopping"></i> Open POS checkout</a>
+      {% if 'manage_loyalty_customers' in permissions %}
+      <a class="btn btn-secondary" href="{{ url_for('customers.create_customer') }}"><i class="fa-solid fa-user-plus"></i> Register member</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,232 @@
+{% set s = page.summary %}
+{% from "partials/_macros.html" import khr_amount %}
+  <!-- ============ Order panel ============ -->
+  <div class="card" id="order-panel">
+    <div class="page-head">
+      <h2 class="mt-0"><i class="fa-solid fa-receipt" style="color:var(--primary)"></i> Current order</h2>
+      {% if page.cart %}
+      <form method="post" action="{{ url_for('checkout.clear_cart') }}" onsubmit="return confirm('Clear the whole cart?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-danger btn-sm" type="submit"><i class="fa-solid fa-trash"></i> Clear</button>
+      </form>
+      {% endif %}
+    </div>
+
+    {% if page.held_orders %}
+    <div class="small" style="margin-bottom:10px;">
+      <strong>Held orders:</strong>
+      {% for h in page.held_orders %}
+      <span class="badge badge-info" style="margin:2px;">
+        {{ h.label }} ({{ h.item_count }})
+        <form method="post" action="{{ url_for('checkout.resume_order', held_id=h.id) }}" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="link-btn" title="Resume"><i class="fa-solid fa-play"></i></button>
+        </form>
+        <form method="post" action="{{ url_for('checkout.delete_held_order', held_id=h.id) }}" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="link-btn" title="Discard" onclick="return confirm('Discard this held order?')"><i class="fa-solid fa-xmark"></i></button>
+        </form>
+      </span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% for line in page.cart %}
+    <div class="cart-line">
+      <div class="cart-line-info">
+        <span class="cart-line-name" title="{{ line.product.name }}">{{ line.product.name }}</span>
+        <div class="qty-stepper">
+          {% for delta, symbol in [(-1, '−'), (1, '+')] %}
+          <form method="post" action="{{ url_for('checkout.update_item') }}" class="ajax-cart">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="product_id" value="{{ line.product.id }}">
+            <input type="hidden" name="quantity" value="{{ line.quantity + delta }}">
+            <button class="qty-btn" type="submit">{{ symbol }}</button>
+          </form>
+          {% if delta == -1 %}<span class="qty-value">{{ line.quantity }}</span>{% endif %}
+          {% endfor %}
+          <form method="post" action="{{ url_for('checkout.update_item') }}" class="ajax-cart">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="product_id" value="{{ line.product.id }}">
+            <input type="hidden" name="quantity" value="0">
+            <button class="qty-remove" type="submit" title="Remove"><i class="fa-solid fa-xmark"></i></button>
+          </form>
+          <span class="muted small">× {{ line.product.price|money }}</span>
+        </div>
+        <form method="post" action="{{ url_for('checkout.set_note') }}" class="ajax-cart" style="margin-top:4px;display:flex;gap:6px;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="product_id" value="{{ line.product.id }}">
+          <input name="note" value="{{ line.note }}" placeholder="Note (e.g. no ice)" class="line-note-input">
+          <button type="submit" class="link-btn" title="Save note"><i class="fa-solid fa-check"></i></button>
+        </form>
+      </div>
+      <span class="cart-line-total">{{ line.line_total|money }}</span>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fa-solid fa-basket-shopping" style="font-size:28px;"></i><br>Cart is empty — tap a product to add it, or scan a barcode.</div>
+    {% endfor %}
+
+    <!-- Loyalty member -->
+    <form method="post" action="{{ url_for('checkout.attach_customer') }}" class="ajax-cart" style="margin-top:14px;display:flex;gap:8px;align-items:flex-end;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div style="flex:1;"><label for="customer_phone_lookup" style="margin-top:0;">Loyalty member phone</label>
+        <input id="customer_phone_lookup" name="customer_phone" value="{{ page.customer.phone if page.customer else '' }}" placeholder="012345678"></div>
+      <button class="btn btn-secondary" type="submit">{{ 'Change' if page.customer else 'Look up' }}</button>
+    </form>
+    {% if page.customer %}
+      <div class="flash flash-success" style="margin:10px 0 0;">
+        <span><i class="fa-solid fa-crown"></i> {{ page.customer.name }} · <span class="badge tier-{{ page.customer.tier.label }}">{{ page.customer.tier.label }}</span> · {{ page.customer.points }} pts</span>
+      </div>
+      {% if page.customer.can_redeem and page.max_redeemable > 0 %}
+      <form method="post" action="{{ url_for('checkout.redeem_points') }}" class="ajax-cart" style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label style="margin:0;" for="points">Redeem points (5¢ each, up to {{ page.max_redeemable }})</label>
+        <input id="points" name="points" type="number" min="0" max="{{ page.max_redeemable }}" value="{{ page.state.points or 0 }}" style="width:90px;">
+        <button class="btn btn-secondary btn-sm" type="submit">Apply</button>
+      </form>
+      {% endif %}
+    {% elif 'manage_loyalty_customers' in permissions %}
+      <div class="small" style="margin-top:6px;"><a href="{{ url_for('customers.create_customer', return_to=url_for('checkout.index')) }}"><i class="fa-solid fa-user-plus"></i> Register a new member</a></div>
+    {% endif %}
+
+    <!-- Manual discount -->
+    {% if page.can_discount %}
+    <form method="post" action="{{ url_for('checkout.set_discount') }}" class="ajax-cart" style="margin-top:12px;display:flex;gap:8px;align-items:flex-end;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div><label style="margin-top:0;">Discount</label>
+        <select name="discount_type">
+          <option value="percent" {{ 'selected' if page.state.discount_type != 'fixed' }}>%</option>
+          <option value="fixed" {{ 'selected' if page.state.discount_type == 'fixed' }}>$ fixed</option>
+        </select>
+      </div>
+      <div style="flex:1;"><input name="discount_value" type="number" min="0" step="0.5" value="{{ page.state.discount_value or 0 }}"></div>
+      <button class="btn btn-secondary btn-sm" type="submit">Apply</button>
+    </form>
+    {% endif %}
+
+    <!-- Exchange rate (admin) -->
+    {% if page.can_set_rate %}
+    <form method="post" action="{{ url_for('checkout.set_rate') }}" style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <span class="small muted">Exchange rate:</span>
+      <input name="rate" type="number" min="1000" max="10000" step="10" value="{{ page.rate.khr_per_usd }}" style="width:100px;">
+      <button class="btn btn-secondary btn-sm" type="submit">Set</button>
+    </form>
+    {% endif %}
+
+    <!-- Payment -->
+    <form method="post" action="{{ url_for('checkout.complete') }}" style="margin-top:12px;" id="payment-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="customer_phone" value="{{ page.customer.phone if page.customer else '' }}">
+      <input type="hidden" name="discount_type" value="{{ page.state.discount_type or 'percent' }}">
+      <input type="hidden" name="discount_value" value="{{ page.state.discount_value or 0 }}">
+      <input type="hidden" name="points_to_redeem" value="{{ page.state.points or 0 }}">
+
+      <div class="checkout-summary" style="margin-top:14px;">
+        <div class="row"><span>Subtotal ({{ s.item_count }} item{{ '' if s.item_count == 1 else 's' }})</span><span>{{ s.subtotal|money }}</span></div>
+        {% if s.discount_amount > 0 %}
+        <div class="row text-success"><span>Discount ({{ s.discount }})</span><span>−{{ s.discount_amount|money }}</span></div>
+        {% endif %}
+        {% if s.member_discount_amount > 0 %}
+        <div class="row text-success"><span>Member discount ({{ s.member_discount_percent }}%)</span><span>−{{ s.member_discount_amount|money }}</span></div>
+        {% endif %}
+        {% if s.points_discount > 0 %}
+        <div class="row text-success"><span>Points redeemed ({{ s.points_redeemed }})</span><span>−{{ s.points_discount|money }}</span></div>
+        {% endif %}
+        {% if s.tax_amount > 0 %}<div class="row"><span>Tax ({{ s.tax_percent }}%)</span><span>{{ s.tax_amount|money }}</span></div>{% endif %}
+        <div class="row grand"><span>Total</span><span>{{ s.total|money }}</span></div>
+        <div class="row muted small"><span>In riel</span><span>{{ page.total_khr | riel }}</span></div>
+      </div>
+
+      <label>Payment method</label>
+      <div class="pay-methods">
+        {% for m in page.payment_methods %}
+        <label><input type="radio" name="payment_method" value="{{ m.value }}" class="pay-method-radio" {{ 'checked' if loop.first }}>
+          <span><i class="fa-solid {{ m.icon }}"></i><br>{{ m.label }}</span></label>
+        {% endfor %}
+      </div>
+
+      <div id="cash-panel">
+        <div class="currency-toggle">
+          <button type="button" class="active" data-mode="usd" onclick="setCurrencyMode('usd')">USD only</button>
+          <button type="button" data-mode="khr" onclick="setCurrencyMode('khr')">Riel only</button>
+          <button type="button" data-mode="mixed" onclick="setCurrencyMode('mixed')">Mixed</button>
+        </div>
+        <input type="hidden" name="currency_mode" id="currency_mode" value="usd">
+        <div id="usd-field"><label for="cash_usd">Cash received (USD)</label>
+          <input id="cash_usd" name="cash_usd" type="number" min="0" step="0.01" placeholder="{{ '%.2f'|format(s.total) }}">
+          <div class="denom-grid">{% for n in page.usd_notes %}<button type="button" class="denom-btn" onclick="addDenom('cash_usd', {{ n }})">${{ n }}</button>{% endfor %}</div>
+        </div>
+        <div id="khr-field" style="display:none;"><label for="cash_khr">Cash received (KHR)</label>
+          <input id="cash_khr" name="cash_khr" type="number" min="0" step="100" placeholder="{{ page.total_khr }}">
+          <div class="denom-grid">{% for n in page.khr_notes %}<button type="button" class="denom-btn" onclick="addDenom('cash_khr', {{ n }})">{{ n|riel }}</button>{% endfor %}</div>
+        </div>
+        <div style="margin-top:8px;">
+          <label>Give change in</label>
+          <div class="currency-toggle">
+            <button type="button" class="active" data-change="usd" onclick="setChangeCurrency('usd')">USD</button>
+            <button type="button" data-change="khr" onclick="setChangeCurrency('khr')">Riel</button>
+          </div>
+          <input type="hidden" name="change_currency" id="change_currency" value="usd">
+        </div>
+      </div>
+
+      <div id="khqr-panel" style="display:none;">
+        <input type="hidden" name="qr_bank" id="qr_bank_input" value="{{ page.state.qr_bank or '' }}">
+        <label>Pay with (choose your bank app)</label>
+        <div class="bank-grid">
+          {% for b in page.banks %}
+          <button type="button" class="bank-pick" data-bank="{{ b.code }}" data-bank-name="{{ b.name }}"
+                  onclick="pickBank('{{ b.code }}','{{ b.name }}')" title="{{ b.name }}">
+            <img src="{{ url_for('static', filename=b.logo) }}" alt="{{ b.name }}">
+          </button>
+          {% endfor %}
+        </div>
+        <span id="khqr-amount-value" style="display:none;">{{ s.total|money }}</span>
+        <button type="button" id="khqr-show-btn" class="btn btn-lime" style="width:100%;margin-top:14px;display:none;" onclick="showKhqrPopup()">
+          <i class="fa-solid fa-qrcode"></i> Show QR to customer
+        </button>
+      </div>
+
+      <div id="card-panel" style="display:none;">
+        <input type="hidden" name="card_brand" id="card_brand_input" value="{{ page.state.card_brand or '' }}">
+        <label>Card type</label>
+        <div class="bank-grid">
+          {% for c in page.card_brands %}
+          <button type="button" class="bank-pick" data-card="{{ c.code }}" onclick="pickCard('{{ c.code }}')" title="{{ c.name }}">
+            <img src="{{ url_for('static', filename=c.logo) }}" alt="{{ c.name }}">
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div id="split-panel" style="display:none;">
+        <p class="small muted" style="margin-top:0;">Not enough cash on hand? Split the total across cash, card and QR.</p>
+        <div class="form-row">
+          <div><label for="split_card_amount">Card amount</label>
+            <input type="number" id="split_card_amount" name="split_card_amount" min="0" step="0.01" value="0" oninput="updateSplitRemaining()"></div>
+          <div><label for="split_card_brand_select">Card type</label>
+            <select id="split_card_brand_select" onchange="document.getElementById('card_brand_input').value=this.value;">
+              <option value="">— none —</option>
+              {% for c in page.card_brands %}<option value="{{ c.code }}" {{ 'selected' if page.state.card_brand == c.code }}>{{ c.name }}</option>{% endfor %}
+            </select></div>
+        </div>
+        <div class="form-row">
+          <div><label for="split_qr_amount">QR amount</label>
+            <input type="number" id="split_qr_amount" name="split_qr_amount" min="0" step="0.01" value="0" oninput="updateSplitRemaining()"></div>
+          <div><label for="split_qr_bank_select">Bank</label>
+            <select id="split_qr_bank_select" onchange="document.getElementById('qr_bank_input').value=this.value;">
+              <option value="">— none —</option>
+              {% for b in page.banks %}<option value="{{ b.code }}" {{ 'selected' if page.state.qr_bank == b.code }}>{{ b.name }}</option>{% endfor %}
+            </select></div>
+        </div>
+        <div class="flash flash-info" style="margin-top:10px;">
+          <span><i class="fa-solid fa-circle-info"></i> Remaining to pay in cash: <strong id="split-remaining">{{ s.total|money }}</strong></span>
+        </div>
+      </div>
+
+      <button class="btn btn-lime" type="submit" style="width:100%;margin-top:16px;padding:14px;font-size:15px;" {{ 'disabled' if not page.cart or not page.session }}>
+        <i class="fa-solid fa-check"></i> Complete sale · {{ s.total|money }}
+      </button>
+    </form>
+  </div>

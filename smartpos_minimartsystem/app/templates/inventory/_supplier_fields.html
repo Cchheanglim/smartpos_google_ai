@@ -1,0 +1,8 @@
+{% set s = supplier if supplier is defined and supplier else none %}
+<label for="name">Company name *</label><input id="name" name="name" maxlength="120" required value="{{ s.name if s else '' }}">
+<label for="contact_name">Contact person</label><input id="contact_name" name="contact_name" maxlength="100" value="{{ s.contact_name if s else '' }}">
+<div class="form-row">
+  <div><label for="phone">Phone</label><input id="phone" name="phone" maxlength="30" value="{{ s.phone if s else '' }}"></div>
+  <div><label for="email">Email</label><input id="email" name="email" type="email" maxlength="120" value="{{ s.email if s else '' }}"></div>
+</div>
+<label for="address">Address</label><input id="address" name="address" maxlength="255" value="{{ s.address if s else '' }}">

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import status_pill %}
+{% block title %}{{ order.reference }}{% endblock %}
+{% block page_title %}Purchase Orders{% endblock %}
+{% block content %}
+<a class="muted small" href="{{ url_for('purchases.list_orders') }}"><i class="fa-solid fa-arrow-left"></i> Purchase orders</a>
+<div class="page-head" style="margin-top:6px;">
+  <div><h1>{{ order.reference }}</h1><p class="subtitle">{{ order.supplier_name }} · {{ status_pill(order.status) }}
+    {% if order.expected_date %} · expected {{ order.expected_date }}{% endif %}</p></div>
+  <div class="actions">
+    {% if order.status.value == 'draft' %}
+    <a class="btn btn-secondary" href="{{ url_for('purchases.edit_order', po_id=order.id) }}"><i class="fa-solid fa-pen"></i> Edit</a>
+    <form method="post" action="{{ url_for('purchases.place_order', po_id=order.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-paper-plane"></i> Place order</button></form>
+    <form method="post" action="{{ url_for('purchases.cancel_order', po_id=order.id) }}" onsubmit="return confirm('Cancel this order?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger" type="submit">Cancel</button></form>
+    {% elif order.status.value == 'ordered' %}
+    <form method="post" action="{{ url_for('purchases.receive_order', po_id=order.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-lime" type="submit"><i class="fa-solid fa-truck-ramp-box"></i> Receive delivery</button></form>
+    <form method="post" action="{{ url_for('purchases.cancel_order', po_id=order.id) }}" onsubmit="return confirm('Cancel this order?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger" type="submit">Cancel</button></form>
+    {% endif %}
+  </div>
+</div>
+<div class="card">
+  <table>
+    <thead><tr><th>Product</th><th>SKU</th><th class="text-right">Qty</th><th class="text-right">Unit cost</th><th class="text-right">Line total</th></tr></thead>
+    <tbody>
+    {% for i in order.items %}
+      <tr><td>{{ i.product_name }}</td><td class="muted small">{{ i.product_sku }}</td>
+          <td class="text-right">{{ i.quantity }}</td><td class="text-right">{{ i.unit_cost|money }}</td>
+          <td class="text-right">{{ i.line_total|money }}</td></tr>
+    {% endfor %}
+    <tr><td colspan="4" class="text-right"><strong>Total</strong></td><td class="text-right"><strong>{{ order.total_cost|money }}</strong></td></tr>
+    </tbody>
+  </table>
+  {% if order.notes %}<p class="small muted" style="margin-top:10px;">Notes: {{ order.notes }}</p>{% endif %}
+</div>
+{% endblock %}

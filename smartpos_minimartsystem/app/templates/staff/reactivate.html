@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Reactivate {{ page.user.name }}{% endblock %}
+{% block page_title %}Staff Management{% endblock %}
+{% block content %}
+{% set u = page.user %}
+<a class="muted small" href="{{ url_for('staff.list_staff', status='resigned') }}"><i class="fa-solid fa-arrow-left"></i> Resigned staff</a>
+<h1 style="margin-top:6px;">Reactivate {{ u.name }}</h1>
+<p class="subtitle">Resigned on {{ u.deactivated_at|dt if u.deactivated_at else 'an earlier date' }}{% if u.deactivation_reason %} — {{ u.deactivation_reason }}{% endif %}.
+  Restoring the account lets them log in again; their sales and shift history are unchanged.</p>
+<div class="card" style="max-width:520px;">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="role_id">Role</label>
+    <select id="role_id" name="role_id">
+      {% for r in page.roles %}<option value="{{ r.id }}" {{ 'selected' if u.role_id == r.id }}>{{ r.display_name }}</option>{% endfor %}
+    </select>
+    <label for="new_password">New password (optional — leave blank to keep the old one)</label>
+    <input id="new_password" name="new_password" type="password" minlength="8">
+    <button class="btn btn-lime" type="submit" style="margin-top:14px;"><i class="fa-solid fa-user-check"></i> Reactivate account</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import avatar %}
+{% block title %}Staff{% endblock %}
+{% block page_title %}Staff Management{% endblock %}
+{% block content %}
+{% from "staff/_admin_tabs.html" import admin_tabs %}
+{{ admin_tabs('staff') }}
+<div class="page-head">
+  <div><h1>Staff</h1><p class="subtitle">{{ page.counts.active or 0 }} active · {{ page.counts.resigned or 0 }} resigned.</p></div>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('staff.create_staff') }}"><i class="fa-solid fa-user-plus"></i> Add staff</a>
+  </div>
+</div>
+
+<div class="flash {{ 'flash-success' if telegram_configured else 'flash-warning' }}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+  <span><i class="fa-solid {{ 'fa-circle-check' if telegram_configured else 'fa-triangle-exclamation' }}"></i>
+    {% if telegram_configured %}Telegram alerts are configured — new products, restocks, low stock, purchase orders,
+    sales, refunds, new staff/roles and password resets are all sent to your chat.
+    {% else %}Telegram alerts aren't configured yet — set <code>TELEGRAM_BOT_TOKEN</code> and
+    <code>TELEGRAM_CHAT_ID</code> in <code>.env</code> and restart the app.{% endif %}</span>
+  <form method="post" action="{{ url_for('staff.telegram_test') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-secondary btn-sm" type="submit"><i class="fa-brands fa-telegram"></i> Send test alert</button>
+  </form>
+</div>
+
+<div class="card">
+  <form method="get" class="toolbar">
+    <div style="flex:2;"><label for="q">Search</label><input id="q" name="q" value="{{ page.term }}" placeholder="Name, email or phone"></div>
+    <div><label for="role_id">Role</label><select id="role_id" name="role_id"><option value="">All roles</option>
+      {% for r in page.roles %}<option value="{{ r.id }}" {{ 'selected' if page.role_id == r.id }}>{{ r.display_name }}</option>{% endfor %}</select></div>
+    <div><label for="status">Status</label><select id="status" name="status">
+      <option value="active" {{ 'selected' if page.status == 'active' }}>Active</option>
+      <option value="resigned" {{ 'selected' if page.status == 'resigned' }}>Resigned</option>
+      <option value="all" {{ 'selected' if page.status == 'all' }}>All</option></select></div>
+    <div style="flex:0;min-width:auto;"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter"></i> Filter</button></div>
+  </form>
+  <div class="table-responsive mt-16">
+  <table>
+    <thead><tr><th></th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Shift</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for u in page.users %}
+      <tr>
+        <td style="width:50px;">{{ avatar(u) }}</td>
+        <td><strong>{{ u.name }}</strong>{% if u.id == current_user.id %} <span class="badge badge-violet">You</span>{% endif %}</td>
+        <td>{{ u.email }}</td>
+        <td>{{ u.phone or '—' }}</td>
+        <td><span class="badge badge-violet">{{ u.role_display_name }}</span></td>
+        <td class="small">{{ u.shift_label or '—' }}</td>
+        <td>{% if u.is_active %}<span class="badge badge-ok">Active</span>{% else %}<span class="badge badge-muted" title="{{ u.deactivation_reason }}">Resigned</span>{% endif %}</td>
+        <td><div class="icon-actions">
+          <a href="{{ url_for('staff.edit_staff', user_id=u.id) }}" title="Edit"><i class="fa-solid fa-pen"></i></a>
+          {% if 'delete_staff' in permissions and u.is_active and u.id != current_user.id %}
+          <form method="post" action="{{ url_for('staff.deactivate_staff', user_id=u.id) }}" class="inline-form" onsubmit="return confirm('Deactivate {{ u.name }}? They will no longer be able to log in.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="reason" value="Resigned">
+            <button type="submit" class="danger" title="Deactivate"><i class="fa-solid fa-user-slash"></i></button>
+          </form>
+          {% endif %}
+          {% if 'manage_users' in permissions and not u.is_active %}
+          <a href="{{ url_for('staff.reactivate_staff', user_id=u.id) }}" title="Reactivate"><i class="fa-solid fa-user-check"></i></a>
+          {% endif %}
+        </div></td>
+      </tr>
+    {% else %}<tr><td colspan="8" class="empty">No staff found.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

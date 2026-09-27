@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import priority_badge %}
+{% block title %}Tasks{% endblock %}
+{% block page_title %}Tasks{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Team tasks</h1>
+    <p class="subtitle">{{ 'Everything assigned across the team.' if page.can_manage else 'Duties assigned to you.' }}
+      {{ page.counts.open }} open{% if page.counts.overdue %} · {{ page.counts.overdue }} overdue{% endif %}</p>
+  </div>
+  {% if page.can_manage %}
+  <button class="btn btn-primary" onclick="document.getElementById('new-task').style.display='flex'"><i class="fa-solid fa-plus"></i> Assign task</button>
+  {% endif %}
+</div>
+
+<div class="kanban">
+  {% for status, tasks in page.columns.items() %}
+  <div class="kanban-column">
+    <h3>{{ status.label }} ({{ tasks|length }})</h3>
+    {% for t in tasks %}
+    <div class="task-card {{ 'overdue' if t.is_overdue }}">
+      <h4>{{ t.title }}</h4>
+      {% if t.description %}<p class="small muted">{{ t.description }}</p>{% endif %}
+      <div class="task-meta">
+        {{ priority_badge(t.priority) }}
+        <span><i class="fa-solid fa-user"></i> {{ t.assigned_to_name }}</span>
+        {% if t.due_date %}<span class="{{ 'text-danger' if t.is_overdue }}"><i class="fa-regular fa-calendar"></i> {{ t.due_date }}</span>{% endif %}
+      </div>
+      <div class="task-meta" style="margin-top:8px;">
+        {% if status.value == 'pending' %}
+        <form method="post" action="{{ url_for('tasks.update_status', task_id=t.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="status" value="in_progress"><button class="btn btn-secondary btn-sm" type="submit">Start</button></form>
+        {% elif status.value == 'in_progress' %}
+        <form method="post" action="{{ url_for('tasks.update_status', task_id=t.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="status" value="completed"><button class="btn btn-lime btn-sm" type="submit">Complete</button></form>
+        {% endif %}
+        {% if page.can_manage %}
+        <form method="post" action="{{ url_for('tasks.delete', task_id=t.id) }}" onsubmit="return confirm('Delete this task?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger btn-sm" type="submit"><i class="fa-solid fa-trash"></i></button></form>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}<div class="empty">Nothing here.</div>{% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+{% if page.can_manage %}
+<div id="new-task" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <h3>Assign a task</h3>
+    <form method="post" action="{{ url_for('tasks.create') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="title">Title *</label><input id="title" name="title" required maxlength="150" placeholder="e.g. Restock shelf 3">
+      <label for="assigned_to">Assign to</label>
+      <select id="assigned_to" name="assigned_to" required>
+        {% for u in page.staff %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
+      </select>
+      <div class="form-row">
+        <div><label for="priority">Priority</label>
+          <select id="priority" name="priority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
+        <div><label for="due_date">Due date</label><input id="due_date" name="due_date" type="date"></div>
+      </div>
+      <label for="description">Description</label><textarea id="description" name="description" rows="3" maxlength="500"></textarea>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('new-task').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-primary">Assign</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

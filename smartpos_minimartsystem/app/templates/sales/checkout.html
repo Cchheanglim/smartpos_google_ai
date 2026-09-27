@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}POS Checkout{% endblock %}
+{% block page_title %}POS Checkout{% endblock %}
+{% block content %}
+{% from "partials/_macros.html" import khr_amount %}
+{% set s = page.summary %}
+{% if not page.session %}
+<div class="flash flash-warning"><span><i class="fa-solid fa-triangle-exclamation"></i>
+  Your register is not open. <a href="{{ url_for('attendance.my_shift') }}">Clock in with your opening cash float</a> before taking payments.</span></div>
+{% endif %}
+{% if page.pricing_error %}
+<div class="flash flash-error"><span><i class="fa-solid fa-circle-exclamation"></i> {{ page.pricing_error }}</span></div>
+{% endif %}
+<div class="checkout-grid">
+  <!-- ============ Product picker ============ -->
+  <div class="card">
+    <div class="toolbar">
+      <form method="get" style="flex:2;display:flex;gap:8px;min-width:220px;">
+        {% if request.args.get('category_id') %}<input type="hidden" name="category_id" value="{{ request.args.get('category_id') }}">{% endif %}
+        <input name="q" value="{{ q }}" placeholder="Search products by name or SKU…">
+        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+      </form>
+      <form method="post" action="{{ url_for('checkout.add_item') }}" class="ajax-cart" data-sound="add" style="flex:1;display:flex;gap:8px;min-width:200px;" id="scan-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input name="code" id="scan-input" placeholder="Scan barcode or type SKU…" autocomplete="off" autofocus>
+        <button class="btn btn-secondary" type="submit" title="Add by barcode/SKU"><i class="fa-solid fa-barcode"></i></button>
+        <button type="button" class="btn btn-secondary" id="camera-scan-btn" title="Scan with camera"><i class="fa-solid fa-camera"></i></button>
+      </form>
+      {% if 'hold_orders' in permissions %}
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('hold-dialog').style.display='flex'"><i class="fa-solid fa-pause"></i> Hold</button>
+      {% endif %}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:14px 0;">
+      <a class="category-pill {{ 'active' if not request.args.get('category_id') }}" href="{{ url_for('checkout.index', q=q or None) }}" style="text-decoration:none;">All</a>
+      {% for c in page.categories %}
+        <a class="category-pill {{ 'active' if request.args.get('category_id')|int == c.id }}" style="text-decoration:none;"
+           href="{{ url_for('checkout.index', category_id=c.id, q=q or None) }}"><i class="fa-solid {{ c.icon }}"></i> {{ c.name }}</a>
+      {% endfor %}
+    </div>
+    <div class="product-grid">
+      {% for p in page.products %}
+      <div class="product-card {{ 'disabled' if p.quantity_in_stock <= 0 }}">
+        <div class="product-card-img-fallback">
+          <i class="fa-solid {{ p.icon }}"></i>
+          {% if p.image_src %}<img class="product-card-img" src="{{ p.image_src }}" alt="" loading="lazy" onerror="this.remove()">
+          {% elif p.is_local_image %}<img class="product-card-img" src="{{ url_for('static', filename='uploads/products/' ~ p.image_filename) }}" alt="" onerror="this.remove()">{% endif %}
+        </div>
+        <div class="product-card-name">{{ p.name }}</div>
+        <div class="product-card-sku">{{ p.sku }}</div>
+        <div class="product-card-meta"><strong style="color:var(--text-dark)">{{ p.price|money }}</strong> · {{ p.quantity_in_stock }} left</div>
+        <form method="post" action="{{ url_for('checkout.add_item') }}" class="ajax-cart" data-sound="add" style="width:100%;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="product_id" value="{{ p.id }}">
+          <input type="hidden" name="q" value="{{ q }}">
+          <input type="hidden" name="category_id" value="{{ request.args.get('category_id', '') }}">
+          <button class="btn btn-lime btn-sm product-card-add" type="submit" {{ 'disabled' if p.quantity_in_stock <= 0 }}>
+            <i class="fa-solid fa-plus"></i> Add</button>
+        </form>
+      </div>
+      {% else %}
+      <div class="empty" style="grid-column:1/-1;">No products match.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% include "sales/_order_panel.html" %}
+</div>
+
+{% if page.can_hold %}
+<div id="hold-dialog" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <h3>Hold this order</h3>
+    <form method="post" action="{{ url_for('checkout.hold_order') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="label">Label (e.g. customer name)</label>
+      <input id="label" name="label" placeholder="Walk-in customer" autofocus>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('hold-dialog').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-primary">Hold order</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+/* ---------------- sound effects ---------------- */
+const SOUNDS = {
+  add: "{{ url_for('static', filename='sounds/add.wav') }}",
+  remove: "{{ url_for('static', filename='sounds/remove.wav') }}",
+  scan: "{{ url_for('static', filename='sounds/scan.wav') }}",
+};
+function playSound(name) {
+  try { const a = new Audio(SOUNDS[name]); a.volume = 0.5; a.play().catch(() => {}); } catch (e) {}
+}
+
+/* ---------------- payment method panel (re-bound after every AJAX refresh) ---------------- */
+function setCurrencyMode(mode) {
+  document.getElementById('currency_mode').value = mode;
+  document.querySelectorAll('.currency-toggle button[data-mode]').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('usd-field').style.display = (mode === 'khr') ? 'none' : 'block';
+  document.getElementById('khr-field').style.display = (mode === 'usd') ? 'none' : 'block';
+}
+function setChangeCurrency(cur) {
+  document.getElementById('change_currency').value = cur;
+  document.querySelectorAll('.currency-toggle button[data-change]').forEach(b => b.classList.toggle('active', b.dataset.change === cur));
+}
+function addDenom(fieldId, value) {
+  var el = document.getElementById(fieldId);
+  el.value = (parseFloat(el.value) || 0) + value;
+}
+
+let khqrCode = null;
+let khqrLastCode = '', khqrLastName = '';
+
+const khqrModal = document.createElement('div');
+khqrModal.className = 'modal-overlay';
+khqrModal.style.display = 'none';
+khqrModal.innerHTML = `
+  <div class="modal khqr-popup">
+    <button type="button" class="khqr-popup-close" onclick="hideKhqrPopup()" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+    <img src="{{ url_for('static', filename='logo.svg') }}" alt="" class="khqr-popup-store-logo">
+    <div class="khqr-popup-store-name">{{ store_name }}</div>
+    <img src="{{ url_for('static', filename='img/khqr-badge.svg') }}" alt="KHQR" class="khqr-badge" style="margin-top:10px;">
+    <div id="khqr-popup-code" class="khqr-popup-code"></div>
+    <div class="khqr-popup-amount" id="khqr-popup-amount"></div>
+    <div class="khqr-popup-bank">Scan with <strong id="khqr-popup-bank-label"></strong></div>
+    <div class="small muted" style="margin-top:10px;">Demo QR for this school project — not a live payment link.</div>
+  </div>`;
+document.body.appendChild(khqrModal);
+khqrModal.addEventListener('click', e => { if (e.target === khqrModal) hideKhqrPopup(); });
+
+function pickBank(code, name) {
+  document.getElementById('qr_bank_input').value = code;
+  document.querySelectorAll('#khqr-panel .bank-pick').forEach(b => b.classList.toggle('selected', b.dataset.bank === code));
+  khqrLastCode = code; khqrLastName = name;
+  document.getElementById('khqr-show-btn').style.display = 'block';
+  showKhqrPopup();
+}
+
+function showKhqrPopup() {
+  if (!khqrLastName) return;
+  const total = document.getElementById('khqr-amount-value').textContent;
+  document.getElementById('khqr-popup-amount').textContent = total;
+  document.getElementById('khqr-popup-bank-label').textContent = khqrLastName;
+  const payload = `KHQR|${khqrLastName}|{{ store_name }}|${total}|${Date.now()}`;
+  const target = document.getElementById('khqr-popup-code');
+  target.innerHTML = '';
+  khqrCode = new QRCode(target, { text: payload, width: 260, height: 260, colorDark: '#14210A', colorLight: '#ffffff' });
+  khqrModal.style.display = 'flex';
+}
+function hideKhqrPopup() {
+  khqrModal.style.display = 'none';
+}
+function pickCard(code) {
+  document.getElementById('card_brand_input').value = code;
+  document.querySelectorAll('#card-panel .bank-pick').forEach(b => b.classList.toggle('selected', b.dataset.card === code));
+}
+
+function updateSplitRemaining() {
+  const totalText = document.getElementById('khqr-amount-value').textContent.replace(/[^0-9.]/g, '');
+  const total = parseFloat(totalText) || 0;
+  const card = parseFloat(document.getElementById('split_card_amount').value) || 0;
+  const qr = parseFloat(document.getElementById('split_qr_amount').value) || 0;
+  const remaining = Math.max(0, total - card - qr);
+  const el = document.getElementById('split-remaining');
+  if (el) el.textContent = '$' + remaining.toFixed(2);
+  const cashField = document.getElementById('cash_usd');
+  if (cashField) cashField.placeholder = remaining.toFixed(2);
+}
+
+function bindPaymentPanel() {
+  const cashPanel = document.getElementById('cash-panel');
+  const khqrPanel = document.getElementById('khqr-panel');
+  const cardPanel = document.getElementById('card-panel');
+  const splitPanel = document.getElementById('split-panel');
+  function sync() {
+    const checked = document.querySelector('.pay-method-radio:checked');
+    const v = checked ? checked.value : 'cash';
+    cashPanel.style.display = (v === 'cash' || v === 'split') ? 'block' : 'none';
+    khqrPanel.style.display = (v === 'khqr') ? 'block' : 'none';
+    cardPanel.style.display = (v === 'card') ? 'block' : 'none';
+    splitPanel.style.display = (v === 'split') ? 'block' : 'none';
+    if (v === 'split') updateSplitRemaining();
+  }
+  document.querySelectorAll('.pay-method-radio').forEach(r => r.addEventListener('change', sync));
+  sync();
+  // Re-select a previously chosen bank (kept after an AJAX refresh) without popping the QR up again.
+  const bankInput = document.getElementById('qr_bank_input');
+  if (bankInput && bankInput.value) {
+    const btn = document.querySelector('#khqr-panel .bank-pick[data-bank="' + bankInput.value + '"]');
+    if (btn) {
+      btn.classList.add('selected');
+      khqrLastCode = btn.dataset.bank; khqrLastName = btn.dataset.bankName;
+      document.getElementById('khqr-show-btn').style.display = 'block';
+    }
+  }
+  const cardInput = document.getElementById('card_brand_input');
+  if (cardInput && cardInput.value) {
+    document.querySelectorAll('#card-panel .bank-pick').forEach(b => b.classList.toggle('selected', b.dataset.card === cardInput.value));
+  }
+}
+bindPaymentPanel();
+
+/* ---------------- AJAX cart: add/update/remove/note/customer/discount/points without a full reload ---------------- */
+function refreshPanel() {
+  return fetch("{{ url_for('checkout.panel') }}", { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(r => r.text())
+    .then(html => {
+      document.getElementById('order-panel').outerHTML = html;
+      bindPaymentPanel();
+    });
+}
+document.addEventListener('submit', function (e) {
+  const form = e.target;
+  if (!form.classList.contains('ajax-cart')) return;
+  e.preventDefault();
+  const isAdd = form.dataset.sound === 'add';
+  const codeField = form.querySelector('[name="code"]');
+  fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(r => r.json())
+    .then(data => {
+      playSound(data.ok ? (isAdd ? 'add' : 'add') : 'remove');
+      if (codeField) codeField.value = '';
+      return refreshPanel();
+    })
+    .catch(() => location.reload());
+});
+
+/* ---------------- camera barcode/QR scanner (stays open, scans multiple items) ---------------- */
+(function () {
+  const openBtn = document.getElementById('camera-scan-btn');
+  if (!openBtn) return;
+  let scanner = null;
+  let lastCode = '';
+  let lastAt = 0;
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.style.display = 'none';
+  modal.innerHTML = '<div class="modal"><h3><i class="fa-solid fa-camera"></i> Scan barcodes</h3>' +
+    '<div id="camera-scan-view" style="width:100%;border-radius:10px;overflow:hidden;"></div>' +
+    '<p class="small muted" style="margin-top:10px;">Keep scanning — each item is added automatically. Close when you\'re done.</p>' +
+    '<div id="camera-scan-log" class="small" style="max-height:110px;overflow-y:auto;margin-top:8px;"></div>' +
+    '<div style="display:flex;gap:8px;margin-top:12px;"><button type="button" class="btn btn-lime" id="camera-scan-close" style="width:100%;"><i class="fa-solid fa-check"></i> Done scanning</button></div></div>';
+  document.body.appendChild(modal);
+  const logEl = modal.querySelector('#camera-scan-log');
+
+  function logLine(text, ok) {
+    const line = document.createElement('div');
+    line.innerHTML = (ok ? '<i class="fa-solid fa-check text-success"></i> ' : '<i class="fa-solid fa-triangle-exclamation text-danger"></i> ') + text;
+    logEl.prepend(line);
+  }
+
+  function closeScanner() {
+    modal.style.display = 'none';
+    lastCode = ''; lastAt = 0;
+    logEl.innerHTML = '';
+    if (scanner) { scanner.stop().catch(() => {}).finally(() => { scanner.clear(); scanner = null; }); }
+    refreshPanel();
+  }
+  document.getElementById('camera-scan-close').addEventListener('click', closeScanner);
+
+  function handleScan(code) {
+    const now = Date.now();
+    if (code === lastCode && now - lastAt < 2000) return;   // ignore the same barcode re-firing while it's still in frame
+    lastCode = code; lastAt = now;
+    playSound('scan');
+    const body = new FormData();
+    body.append('csrf_token', document.querySelector('#scan-form input[name="csrf_token"]').value);
+    body.append('code', code);
+    fetch("{{ url_for('checkout.add_item') }}", { method: 'POST', body, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(r => r.json())
+      .then(data => { logLine(data.message || code, data.ok); if (!data.ok) playSound('remove'); })
+      .catch(() => logLine('Could not add ' + code, false));
+  }
+
+  openBtn.addEventListener('click', function () {
+    if (typeof Html5Qrcode === 'undefined') { alert('Camera scanner failed to load (no internet connection?).'); return; }
+    modal.style.display = 'flex';
+    scanner = new Html5Qrcode('camera-scan-view');
+    Html5Qrcode.getCameras().then(cams => {
+      if (!cams || !cams.length) { alert('No camera found on this device.'); closeScanner(); return; }
+      const camId = cams.find(c => /back|rear|environment/i.test(c.label))?.id || cams[cams.length - 1].id;
+      scanner.start(camId, { fps: 10, qrbox: { width: 260, height: 170 } }, handleScan, () => {});
+    }).catch(() => { alert('Camera access was blocked. Allow camera permission and try again.'); closeScanner(); });
+  });
+})();
+</script>
+{% endblock %}

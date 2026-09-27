@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Edit category{% endblock %}
+{% block page_title %}Categories{% endblock %}
+{% block content %}
+{% set c = page.category %}
+<h1>Edit category</h1>
+<div class="card" style="max-width:560px;">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="name">Name *</label><input id="name" name="name" maxlength="60" required value="{{ c.name }}">
+    <label for="description">Description</label><input id="description" name="description" maxlength="255" value="{{ c.description }}">
+    <label for="icon">Icon</label>
+    <select id="icon" name="icon">{% for icon in page.icons %}<option value="{{ icon }}" {{ 'selected' if icon == c.icon }}>{{ icon[3:]|replace('-', ' ')|title }}</option>{% endfor %}</select>
+    <div style="margin-top:16px;display:flex;gap:10px;">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+      <a class="btn btn-secondary" href="{{ url_for('categories.list_categories') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><title>404 · Page not found</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card error-page">
+    <div class="code">404</div>
+    <h2>Page not found</h2>
+    <p class="subtitle">The page or record you asked for does not exist.</p>
+    <a class="btn btn-primary" href="{{ url_for('dashboard.index') }}">Back to dashboard</a>
+  </div>
+</div>
+</body>
+</html>

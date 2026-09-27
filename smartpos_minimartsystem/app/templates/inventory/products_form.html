@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% set p = page.product %}
+{# `form` holds what the user just typed (after a validation error); otherwise fall back to the saved product. #}
+{% macro val(field, default='') -%}{{ form.get(field) if form and form.get(field) is not none else default }}{%- endmacro %}
+{% block title %}{{ 'Edit' if p else 'New' }} product{% endblock %}
+{% block page_title %}Products &amp; Stock{% endblock %}
+{% block content %}
+<h1>{{ 'Edit ' ~ p.name if p else 'Add a new product' }}</h1>
+<p class="subtitle">{{ 'Update catalog details. Stock levels are changed from the product page so every change is logged.' if p else 'Create a catalog item. Opening stock is recorded in the stock ledger automatically.' }}</p>
+
+<div class="card" style="max-width:860px;">
+  <form method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-row">
+      <div style="flex:2;"><label for="name">Product name *</label>
+        <input id="name" name="name" maxlength="150" required value="{{ val('name', p.name if p else '') }}"></div>
+      <div><label for="sku">SKU</label>
+        <input id="sku" name="sku" maxlength="30" value="{{ val('sku', p.sku if p else '') }}" placeholder="{{ page.suggested_sku }}">
+        {% if not p %}<div class="muted small">Leave blank to use {{ page.suggested_sku }}</div>{% endif %}</div>
+      <div><label for="barcode">Barcode (EAN, digits only)</label>
+        <input id="barcode" name="barcode" maxlength="14" pattern="[0-9]*" value="{{ val('barcode', p.barcode if p else '') }}"></div>
+    </div>
+    <div class="form-row">
+      <div><label for="category_id">Category</label>
+        <select id="category_id" name="category_id">
+          <option value="">— None —</option>
+          {% set chosen = val('category_id', p.category_id if p else '')|string %}
+          {% for c in page.categories %}<option value="{{ c.id }}" {{ 'selected' if chosen == c.id|string }}>{{ c.name }}</option>{% endfor %}
+        </select></div>
+      <div><label for="supplier_id">Supplier</label>
+        <select id="supplier_id" name="supplier_id">
+          <option value="">— None —</option>
+          {% set chosen_s = val('supplier_id', p.supplier_id if p else '')|string %}
+          {% for s in page.suppliers %}<option value="{{ s.id }}" {{ 'selected' if chosen_s == s.id|string }}>{{ s.name }}</option>{% endfor %}
+        </select></div>
+    </div>
+    <div class="form-row">
+      <div><label for="price">Selling price (USD) *</label>
+        <input id="price" name="price" type="number" step="0.01" min="0.01" required value="{{ val('price', p.price if p else '') }}"></div>
+      <div><label for="cost">Cost price (USD)</label>
+        <input id="cost" name="cost" type="number" step="0.01" min="0" value="{{ val('cost', p.cost if p else '0.00') }}"></div>
+      {% if not p %}
+      <div><label for="quantity_in_stock">Opening stock</label>
+        <input id="quantity_in_stock" name="quantity_in_stock" type="number" min="0" step="1" value="{{ val('quantity_in_stock', '0') }}"></div>
+      {% endif %}
+      <div><label for="low_stock_threshold">Low-stock alert at</label>
+        <input id="low_stock_threshold" name="low_stock_threshold" type="number" min="0" step="1" value="{{ val('low_stock_threshold', p.low_stock_threshold if p else 5) }}"></div>
+    </div>
+    <label for="image">Product image (PNG/JPG/WEBP, max 5 MB)</label>
+    <input id="image" name="image" type="file" accept="image/*">
+    {% if p and p.image_filename %}
+      <div class="muted small" style="margin-top:6px;">Current:
+        <img src="{{ p.image_src or url_for('static', filename='uploads/products/' ~ p.image_filename) }}" alt="" style="height:40px;vertical-align:middle;border-radius:6px;" onerror="this.style.display='none'">
+        {% if p.image_src %}(linked from an external site){% endif %} — choose a file to replace it.</div>
+    {% endif %}
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ 'Save changes' if p else 'Create product' }}</button>
+      <a class="btn btn-secondary" href="{{ url_for('products.view_product', product_id=p.id) if p else url_for('products.list_products') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

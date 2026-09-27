@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if page.order else 'New' }} purchase order{% endblock %}
+{% block page_title %}Purchase Orders{% endblock %}
+{% block content %}
+<h1>{{ 'Edit ' ~ page.order.reference if page.order else 'New purchase order' }}</h1>
+<div class="card" style="max-width:900px;">
+  <form method="post" id="po-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-row">
+      <div><label for="supplier_id">Supplier *</label>
+        <select id="supplier_id" name="supplier_id" required onchange="loadSupplierProducts()">
+          <option value="">— Choose —</option>
+          {% for s in page.suppliers %}<option value="{{ s.id }}" {{ 'selected' if page.order and page.order.supplier_id == s.id }}>{{ s.name }}</option>{% endfor %}
+        </select></div>
+      <div><label for="expected_date">Expected delivery</label>
+        <input id="expected_date" name="expected_date" type="date" value="{{ page.order.expected_date if page.order else '' }}"></div>
+    </div>
+    <label for="notes">Notes</label><input id="notes" name="notes" value="{{ page.order.notes if page.order else '' }}">
+
+    <h3 style="margin-top:16px;">Products</h3>
+    <div id="product-rows-status" class="small muted" style="display:none;margin-bottom:8px;"><i class="fa-solid fa-spinner fa-spin"></i> Loading products…</div>
+    <table class="po-lines-table">
+      <thead><tr><th>Product</th><th>Quantity</th><th>Unit cost</th></tr></thead>
+      <tbody id="product-rows">
+        {% include "purchases/_product_rows.html" %}
+      </tbody>
+    </table>
+    <div style="margin-top:16px;display:flex;gap:10px;">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save draft</button>
+      <a class="btn btn-secondary" href="{{ url_for('purchases.list_orders') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+<script>
+function loadSupplierProducts() {
+  const supplierId = document.getElementById('supplier_id').value;
+  if (!supplierId) return;
+  const status = document.getElementById('product-rows-status');
+  const tbody = document.getElementById('product-rows');
+  status.style.display = 'block';
+  fetch("{{ url_for('purchases.product_rows') }}?supplier_id=" + encodeURIComponent(supplierId),
+        { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(r => r.text())
+    .then(html => { tbody.innerHTML = html; })
+    .catch(() => { alert('Could not load products for that supplier — please try again.'); })
+    .finally(() => { status.style.display = 'none'; });
+}
+</script>
+{% endblock %}

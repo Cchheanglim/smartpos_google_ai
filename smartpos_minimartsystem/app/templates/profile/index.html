@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import avatar %}
+{% block title %}My profile{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+{% block content %}
+<h1>My profile</h1>
+<p class="subtitle">Signed in as {{ user.email }} · {{ user.role_display_name }}</p>
+<div class="grid-2">
+  <div class="card">
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:10px;">
+      {{ avatar(user, 'avatar-lg') }}
+      <div><strong style="font-size:18px;">{{ user.name }}</strong><br><span class="badge badge-violet">{{ user.role_display_name }}</span>
+        <div class="muted small">Member since {{ user.created_at|dt }}</div></div>
+    </div>
+    <form method="post" action="{{ url_for('profile.update') }}" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="name">Display name</label><input id="name" name="name" maxlength="100" required value="{{ user.name }}">
+      <label for="phone">Phone</label><input id="phone" name="phone" maxlength="20" value="{{ user.phone or '' }}">
+      <label for="avatar">Profile photo</label><input id="avatar" name="avatar" type="file" accept="image/*">
+      <button class="btn btn-primary" type="submit" style="margin-top:14px;"><i class="fa-solid fa-floppy-disk"></i> Save profile</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2 class="mt-0"><i class="fa-solid fa-lock" style="color:var(--primary)"></i> Change password</h2>
+    <form method="post" action="{{ url_for('profile.change_password') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="current_password">Current password</label><input id="current_password" name="current_password" type="password" required>
+      <label for="new_password">New password</label><input id="new_password" name="new_password" type="password" minlength="8" required>
+      <label for="confirm_password">Confirm new password</label><input id="confirm_password" name="confirm_password" type="password" minlength="8" required>
+      <button class="btn btn-secondary" type="submit" style="margin-top:14px;"><i class="fa-solid fa-key"></i> Update password</button>
+    </form>
+    <h2>Your permissions</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      {% for p in permissions|sort %}<span class="badge badge-muted">{{ p|replace('_', ' ') }}</span>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

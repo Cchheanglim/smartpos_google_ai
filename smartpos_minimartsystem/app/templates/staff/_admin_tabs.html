@@ -1,0 +1,14 @@
+{% macro admin_tabs(active) %}
+<div class="admin-tabs">
+  {% if 'manage_users' in permissions %}
+  <a href="{{ url_for('staff.list_staff') }}" class="admin-tab {{ 'active' if active == 'staff' }}"><i class="fa-solid fa-user-group"></i> Staff</a>
+  {% endif %}
+  {% if 'manage_shifts' in permissions %}
+  <a href="{{ url_for('staff.shifts') }}" class="admin-tab {{ 'active' if active == 'shifts' }}"><i class="fa-solid fa-calendar-days"></i> Shifts</a>
+  {% endif %}
+  {% if 'manage_roles' in permissions %}
+  <a href="{{ url_for('roles.index') }}" class="admin-tab {{ 'active' if active == 'roles' }}"><i class="fa-solid fa-shield-halved"></i> Roles</a>
+  <a href="{{ url_for('roles.permissions') }}" class="admin-tab {{ 'active' if active == 'permissions' }}"><i class="fa-solid fa-key"></i> Permissions</a>
+  {% endif %}
+</div>
+{% endmacro %}

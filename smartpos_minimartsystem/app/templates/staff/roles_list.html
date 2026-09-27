@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Role management{% endblock %}
+{% block page_title %}Roles &amp; Permissions{% endblock %}
+{% block content %}
+{% from "staff/_admin_tabs.html" import admin_tabs %}
+{{ admin_tabs('roles') }}
+<div class="page-head">
+  <div><h1>Role management</h1><p class="subtitle">Define system roles and configure their associated capability grants.</p></div>
+  <a class="btn btn-secondary" href="{{ url_for('roles.matrix') }}"><i class="fa-solid fa-table-cells"></i> Bulk matrix editor</a>
+</div>
+<div class="grid-2">
+  <div class="card">
+    <div class="table-responsive">
+    <table>
+      <thead><tr><th>ID</th><th>Role name</th><th>Description</th><th>Permissions</th><th></th></tr></thead>
+      <tbody>
+      {% for r in roles %}
+        <tr>
+          <td class="muted small">#{{ r.id }}</td>
+          <td><span class="role-name-badge" style="background:var(--bg-color);color:var(--primary);">{{ r.name }}</span>{% if r.is_system %} <span class="badge badge-muted" title="Built-in role">system</span>{% endif %}</td>
+          <td class="small">{{ r.description }}<div class="muted">{{ r.user_count }} staff</div></td>
+          <td><span class="permission-chip"><i class="fa-solid fa-key"></i> {{ r.permission_names|length }} grants</span></td>
+          <td><div class="icon-actions">
+            <a href="{{ url_for('roles.configure', role_id=r.id) }}" title="Configure"><i class="fa-solid fa-sliders"></i></a>
+            {% if not r.is_system %}
+            <form method="post" action="{{ url_for('roles.delete', role_id=r.id) }}" class="inline-form" onsubmit="return confirm('Delete role {{ r.display_name }}?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="danger" title="Delete"><i class="fa-solid fa-trash"></i></button>
+            </form>
+            {% endif %}
+          </div></td>
+        </tr>
+      {% else %}<tr><td colspan="5" class="empty">No roles yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  <div class="card">
+    <h2 class="mt-0"><i class="fa-solid fa-plus" style="color:var(--primary)"></i> New role</h2>
+    <form method="post" action="{{ url_for('roles.create') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="name">Role name *</label>
+      <input id="name" name="name" required maxlength="60" placeholder="e.g. Auditor">
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="3" maxlength="255" placeholder="Brief explanation of this role's purpose…"></textarea>
+      <button class="btn btn-primary" type="submit" style="margin-top:14px;width:100%;"><i class="fa-solid fa-plus"></i> Create role</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Permission registry{% endblock %}
+{% block page_title %}Roles &amp; Permissions{% endblock %}
+{% block content %}
+{% from "staff/_admin_tabs.html" import admin_tabs %}
+{{ admin_tabs('permissions') }}
+<h1>Permission registry</h1>
+<p class="subtitle">Every capability token used for server-side access control — {{ count }} in total.</p>
+<div class="grid-2">
+  <div class="card">
+    <div class="table-responsive">
+    <table>
+      <thead><tr><th>Code</th><th>Group</th><th>Description</th></tr></thead>
+      <tbody>
+      {% for group_name, perms in groups %}
+        <tr><td colspan="3" style="background:var(--bg-color);font-weight:600;">{{ group_name }}</td></tr>
+        {% for p in perms %}
+        <tr>
+          <td><span class="permission-chip"><i class="fa-solid fa-key"></i> {{ p.name }}</span></td>
+          <td class="small muted">{{ p.group_name }}</td>
+          <td class="small">{{ p.description }}</td>
+        </tr>
+        {% endfor %}
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  <div class="card">
+    <h2 class="mt-0"><i class="fa-solid fa-plus" style="color:var(--primary)"></i> New permission</h2>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="code">Permission code *</label>
+      <input id="code" name="code" required maxlength="60" placeholder="e.g. report.export" style="font-family:monospace;">
+      <label for="group_name">Group</label>
+      <input id="group_name" name="group_name" maxlength="40" placeholder="e.g. Reports">
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="3" maxlength="255" placeholder="What capability does this permission grant?"></textarea>
+      <button class="btn btn-primary" type="submit" style="margin-top:14px;width:100%;"><i class="fa-solid fa-plus"></i> Register permission</button>
+    </form>
+    <p class="small muted" style="margin-top:12px;">A new permission isn't granted to anyone automatically — open a role's <strong>Configure</strong> page (Roles tab) to grant it.</p>
+  </div>
+</div>
+{% endblock %}

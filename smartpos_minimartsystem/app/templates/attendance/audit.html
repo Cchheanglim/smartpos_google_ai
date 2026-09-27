@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Cash drawer audit{% endblock %}
+{% block page_title %}Cash Drawer Audit{% endblock %}
+{% block content %}
+<h1>Cash drawer audit</h1>
+<p class="subtitle">Every shift's opening float, expected vs. counted cash, and the resulting variance.</p>
+<div class="card-grid">
+  <div class="stat-card"><div class="stat-label"><i class="fa-solid fa-vault"></i>Cash in open drawers</div><div class="stat-value">{{ page.cash_in_drawers|money }}</div></div>
+  <div class="stat-card"><div class="stat-label"><i class="fa-solid fa-arrow-trend-up"></i>Total overage</div><div class="stat-value text-success">{{ page.overage_total|money }}</div></div>
+  <div class="stat-card"><div class="stat-label"><i class="fa-solid fa-arrow-trend-down"></i>Total shortage</div><div class="stat-value text-danger">{{ page.shortage_total|money }}</div></div>
+</div>
+
+{% if page.open_sessions %}
+<div class="card" style="margin-bottom:20px;">
+  <h2 class="mt-0">Open registers</h2>
+  <table>
+    <thead><tr><th>Cashier</th><th>Since</th><th>Float</th><th class="text-right"></th></tr></thead>
+    <tbody>
+    {% for s in page.open_sessions %}
+      <tr>
+        <td>{{ s.user_name }}</td><td class="small">{{ s.clock_in|dt }}</td><td>{{ s.opening_float|money }}</td>
+        <td class="text-right"><a class="btn btn-secondary btn-sm" href="{{ url_for('attendance.detail', attendance_id=s.id) }}">Force close</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="card">
+  <form method="get" class="toolbar">
+    <div><label for="user_id">Staff member</label>
+      <select id="user_id" name="user_id"><option value="">Everyone</option>
+        {% for u in page.staff %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
+      </select></div>
+    <div><label for="status">Status</label>
+      <select id="status" name="status"><option value="">Any</option><option value="open">Open</option>
+        <option value="balanced">Balanced</option><option value="overage">Overage</option><option value="shortage">Shortage</option></select></div>
+    <div style="flex:0;min-width:auto;"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter"></i> Filter</button></div>
+  </form>
+  <div class="table-responsive mt-16">
+  <table>
+    <thead><tr><th>Cashier</th><th>Clock in</th><th>Clock out</th><th class="text-right">Expected</th><th class="text-right">Counted</th><th class="text-right">Variance</th></tr></thead>
+    <tbody>
+    {% for s in page.sessions %}
+      <tr>
+        <td><a href="{{ url_for('attendance.detail', attendance_id=s.id) }}">{{ s.user_name }}</a></td>
+        <td class="small">{{ s.clock_in|dt }}</td>
+        <td class="small">{{ s.clock_out|dt if s.clock_out else '—' }}</td>
+        <td class="text-right">{{ s.expected_cash|money if s.expected_cash is not none else '—' }}</td>
+        <td class="text-right">{{ s.counted_cash|money if s.counted_cash is not none else '—' }}</td>
+        <td class="text-right">{% if s.status %}<span class="badge drawer-status {{ s.status.css }}">{{ '%+.2f'|format(s.cash_difference) }}</span>{% endif %}</td>
+      </tr>
+    {% else %}<tr><td colspan="6" class="empty">No shifts found.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

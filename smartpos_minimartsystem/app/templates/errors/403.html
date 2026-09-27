@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><title>403 · Access denied</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card error-page">
+    <div class="code">403</div>
+    <h2>Access denied</h2>
+    <p class="subtitle">Your role does not have permission to open this page.</p>
+    <a class="btn btn-primary" href="{{ url_for('dashboard.index') }}">Back to dashboard</a>
+  </div>
+</div>
+</body>
+</html>

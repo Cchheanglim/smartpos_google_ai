@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import stock_badge %}
+{% set p = page.product %}
+{% block title %}{{ p.name }}{% endblock %}
+{% block page_title %}Products &amp; Stock{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <a class="muted small" href="{{ url_for('products.list_products') }}"><i class="fa-solid fa-arrow-left"></i> All products</a>
+    <h1 style="margin-top:6px;">{{ p.name }}</h1>
+    <p class="subtitle">{{ p.sku }} · {{ stock_badge(p) }}</p>
+  </div>
+  <div class="actions">
+    {% if 'manage_products' in permissions %}<a class="btn btn-secondary" href="{{ url_for('products.edit_product', product_id=p.id) }}"><i class="fa-solid fa-pen"></i> Edit</a>{% endif %}
+    {% if 'print_barcodes' in permissions %}<a class="btn btn-secondary" href="{{ url_for('products.barcodes', id=p.id) }}"><i class="fa-solid fa-barcode"></i> Print label</a>{% endif %}
+    {% if 'delete_products' in permissions %}
+    <form method="post" action="{{ url_for('products.delete_product', product_id=p.id) }}" class="inline-form" onsubmit="return confirm('Delete this product permanently?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-danger" type="submit"><i class="fa-solid fa-trash"></i> Delete</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-3-1">
+  <div>
+    <div class="card">
+      <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
+        <div class="product-card-img-fallback" style="width:140px;height:140px;">
+          <i class="fa-solid {{ p.icon }}" style="font-size:44px;"></i>
+          {% if p.image_src %}<img class="product-card-img" src="{{ p.image_src }}" alt="" loading="lazy" onerror="this.remove()">
+          {% elif p.is_local_image %}<img class="product-card-img" src="{{ url_for('static', filename='uploads/products/' ~ p.image_filename) }}" alt="" onerror="this.remove()">{% endif %}
+        </div>
+        <dl class="dl" style="flex:1;">
+          <dt>Category</dt><dd>{{ p.category_name or '—' }}</dd>
+          <dt>Supplier</dt><dd>{{ p.supplier_name or '—' }}</dd>
+          <dt>Barcode / SKU</dt><dd>{{ p.barcode or '—' }} <span class="muted small">({{ p.sku }})</span></dd>
+          <dt>Selling price</dt><dd>{{ p.price|money }} <span class="muted small">({{ p.price|khr }})</span></dd>
+          {% if 'view_cost_prices' in permissions %}
+          <dt>Cost price</dt><dd>{{ p.cost|money }}</dd>
+          <dt>Margin</dt><dd>{{ p.margin|money }} / unit ({{ p.margin_percent }}%)</dd>
+          <dt>Stock value</dt><dd>{{ p.stock_value|money }}</dd>
+          {% endif %}
+          <dt>On hand</dt><dd>{{ p.quantity_in_stock }} units (alert at {{ p.low_stock_threshold }})</dd>
+          <dt>Added</dt><dd>{{ p.created_at|dt }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="mt-0">Stock ledger</h2>
+      <div class="table-responsive">
+        <table>
+          <thead><tr><th>When</th><th>Reason</th><th>Note</th><th>By</th><th class="text-right">Change</th></tr></thead>
+          <tbody>
+          {% for m in page.movements %}
+            <tr>
+              <td class="muted small">{{ m.created_at|dt }}</td>
+              <td><span class="badge {{ 'badge-ok' if m.is_inbound else 'badge-low' }}">{{ m.reason.label }}</span></td>
+              <td class="small">{{ m.note }}</td>
+              <td class="small">{{ m.created_by_name }}</td>
+              <td class="text-right {{ 'text-success' if m.is_inbound else 'text-danger' }}">{{ '%+d'|format(m.change_amount) }}</td>
+            </tr>
+          {% else %}<tr><td colspan="5" class="empty">No stock movements recorded yet.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if 'adjust_stock' in permissions %}
+  <div class="card">
+    <h2 class="mt-0"><i class="fa-solid fa-scale-balanced" style="color:var(--primary)"></i> Adjust stock</h2>
+    <p class="muted small">Every adjustment is written to the ledger with your name.</p>
+    <form method="post" action="{{ url_for('products.adjust_stock', product_id=p.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Direction</label>
+      <div class="pay-methods" style="grid-template-columns:1fr 1fr;">
+        <label><input type="radio" name="direction" value="in" checked><span><i class="fa-solid fa-arrow-down"></i> Stock in</span></label>
+        <label><input type="radio" name="direction" value="out"><span><i class="fa-solid fa-arrow-up"></i> Stock out</span></label>
+      </div>
+      <label for="quantity">Quantity</label>
+      <input id="quantity" name="quantity" type="number" min="1" step="1" required>
+      <label for="reason">Reason</label>
+      <select id="reason" name="reason">
+        {% for r in page.reasons %}<option value="{{ r.value }}">{{ r.label }}</option>{% endfor %}
+      </select>
+      <label for="note">Note (optional)</label>
+      <input id="note" name="note" maxlength="255" placeholder="e.g. Delivery #1043, expired batch…">
+      <button class="btn btn-lime" type="submit" style="width:100%;margin-top:16px;"><i class="fa-solid fa-check"></i> Apply adjustment</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% set existing_items = (page.order.items if page.order else []) %}
+{% for p in page.products %}
+{% set found = existing_items | selectattr('product_id', 'equalto', p.id) | list %}
+{% set existing = found[0] if found else None %}
+<tr>
+  <td>{{ p.name }} <span class="muted small">({{ p.sku }})</span>
+    <input type="hidden" name="line_product" value="{{ p.id }}"></td>
+  <td><input name="line_qty" type="number" min="0" step="1" value="{{ existing.quantity if existing else 0 }}"></td>
+  <td><input name="line_cost" type="number" min="0" step="0.01" value="{{ existing.unit_cost if existing else p.cost }}"></td>
+</tr>
+{% else %}<tr><td colspan="3" class="empty">This supplier has no products yet — add some from Products &amp; Stock first.</td></tr>
+{% endfor %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Roles &amp; permissions{% endblock %}
+{% block page_title %}Roles &amp; Permissions{% endblock %}
+{% block content %}
+{% from "staff/_admin_tabs.html" import admin_tabs %}
+{{ admin_tabs('roles') }}
+<a class="muted small" href="{{ url_for('roles.index') }}"><i class="fa-solid fa-arrow-left"></i> Role management</a>
+<h1 style="margin-top:6px;">Bulk permission matrix</h1>
+<p class="subtitle">Access is resolved as <strong>user → role → permissions</strong>. Changing a role here changes it for everyone who holds it.
+  The Super Admin role always keeps <em>Manage Staff</em> and <em>Manage Roles</em>. Individual overrides (set per staff member on their edit page) apply on top of this matrix.</p>
+<div class="card">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="table-responsive">
+    <table class="matrix">
+      <thead><tr><th>Permission</th>{% for r in page.roles %}<th>{{ r.display_name }}{% if r.user_count %}<div class="muted small" style="font-weight:400;">{{ r.user_count }} staff</div>{% endif %}</th>{% endfor %}</tr></thead>
+      <tbody>
+      {% for group_name, perms in page.groups %}
+        <tr><td colspan="{{ page.roles|length + 1 }}" style="background:var(--bg-color);font-weight:600;">{{ group_name }}</td></tr>
+        {% for p in perms %}
+        <tr>
+          <td>{{ p.display_name }}<div class="muted small">{{ p.description }}</div></td>
+          {% for r in page.roles %}
+          <td><input type="checkbox" name="perm_{{ r.id }}_{{ p.id }}" {{ 'checked' if p.name in r }} aria-label="{{ r.display_name }}: {{ p.display_name }}"></td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <button class="btn btn-primary" type="submit" style="margin-top:16px;"><i class="fa-solid fa-floppy-disk"></i> Save permission matrix</button>
+  </form>
+</div>
+{% endblock %}

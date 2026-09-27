@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Work shifts{% endblock %}
+{% block page_title %}Work Shifts{% endblock %}
+{% block content %}
+{% from "staff/_admin_tabs.html" import admin_tabs %}
+{{ admin_tabs('shifts') }}
+<h1>Work shifts</h1>
+<p class="subtitle">Shift templates staff can be assigned to (Morning, Afternoon, Evening, Night).</p>
+<div class="grid-2">
+  <div class="card">
+    <table>
+      <thead><tr><th>Name</th><th>Hours</th><th class="text-right">Staff</th><th></th></tr></thead>
+      <tbody>
+      {% for sh in shifts %}
+        <tr>
+          <td>{{ sh.name }}</td>
+          <td class="small">{{ sh.label }}{% if sh.is_overnight %} <span class="muted">(overnight)</span>{% endif %}</td>
+          <td class="text-right">{{ sh.staff_count }}</td>
+          <td><form method="post" action="{{ url_for('staff.delete_shift', shift_id=sh.id) }}" onsubmit="return confirm('Remove this shift? Staff keep their account but lose the assignment.')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="danger" title="Delete"><i class="fa-solid fa-trash"></i></button>
+          </form></td>
+        </tr>
+      {% else %}<tr><td colspan="4" class="empty">No shifts yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h2 class="mt-0">Add a shift</h2>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="name">Name</label><input id="name" name="name" maxlength="40" required placeholder="e.g. Morning">
+      <div class="form-row">
+        <div><label for="start_time">Start</label><input id="start_time" name="start_time" type="time" required></div>
+        <div><label for="end_time">End</label><input id="end_time" name="end_time" type="time" required></div>
+      </div>
+      <button class="btn btn-primary" type="submit" style="margin-top:12px;"><i class="fa-solid fa-plus"></i> Add shift</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

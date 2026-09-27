@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Barcode sheet{% endblock %}
+{% block page_title %}Products &amp; Stock{% endblock %}
+{% block content %}
+<div class="page-head no-print">
+  <h1>Printable barcode sheet</h1>
+  <button class="btn btn-primary" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+</div>
+<p class="subtitle no-print">38×25mm shelf labels for every product{{ ' shown' if products }} — cut along the dashed lines.</p>
+<div class="barcode-sheet">
+  {% for p in products %}
+  <div class="barcode-label">
+    <div style="font-size:12px;font-weight:600;">{{ p.name }}</div>
+    {{ barcodes[p.id]|safe }}
+    <div class="price">{{ p.price|money }}</div>
+  </div>
+  {% else %}<div class="empty">No products to print.</div>{% endfor %}
+</div>
+{% endblock %}

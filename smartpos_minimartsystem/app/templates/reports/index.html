@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import bar_list %}
+{% block title %}Analytics &amp; Reports{% endblock %}
+{% block page_title %}Analytics &amp; Reports{% endblock %}
+{% block content %}
+{% set s = page.summary %}
+<div class="page-head">
+  <div><h1>Analytics &amp; reports</h1>
+    <p class="subtitle">{{ page.period.start|dt }} – {{ page.period.end|dt }} ({{ page.period.days }} days)</p></div>
+  <form method="get" class="toolbar" style="min-width:420px;">
+    <div><label for="start">From</label><input id="start" type="date" name="start" value="{{ page.period.start }}"></div>
+    <div><label for="end">To</label><input id="end" type="date" name="end" value="{{ page.period.end }}"></div>
+    <div style="flex:0;min-width:auto;display:flex;gap:6px;">
+      <button class="btn btn-primary" type="submit">Apply</button>
+      {% if page.can_export %}
+      <a class="btn btn-secondary" href="{{ url_for('reports.export_csv', start=page.period.start, end=page.period.end) }}"><i class="fa-solid fa-file-csv"></i> CSV</a>
+      <a class="btn btn-secondary" href="{{ url_for('reports.export_xlsx', start=page.period.start, end=page.period.end) }}"><i class="fa-solid fa-file-excel"></i> Excel</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="card-grid">
+  <div class="stat-card"><div class="stat-label"><i class="fa-solid fa-sack-dollar"></i>Revenue</div><div class="stat-value">{{ s.revenue|money }}</div><div class="muted small">net of refunds {{ s.net_revenue|money }}</div></div>
+  <div class="stat-card"><div class="stat-label"><i class="fa-solid fa-receipt"></i>Transactions</div><div class="stat-value">{{ s.transactions }}</div><div class="muted small">avg basket {{ s.average_basket|money }}</div></div>
+  <div class="stat-card"><div class="stat-label"><i class="fa-solid fa-cubes"></i>Items sold</div><div class="stat-value">{{ s.items_sold }}</div><div class="muted small">discounts given {{ s.discounts|money }}</div></div>
+  {% if 'view_profit_loss' in permissions %}
+  <div class="stat-card" style="border-top-color:var(--success);"><div class="stat-label"><i class="fa-solid fa-chart-pie"></i>Gross profit</div><div class="stat-value">{{ s.gross_profit|money }}</div><div class="muted small">margin {{ s.margin_percent }}%</div></div>
+  <div class="stat-card" style="border-top-color:var(--success);"><div class="stat-label"><i class="fa-solid fa-coins"></i>Net profit</div><div class="stat-value">{{ s.net_profit|money }}</div><div class="muted small">after refunds</div></div>
+  {% endif %}
+  <div class="stat-card" style="border-top-color:var(--danger);"><div class="stat-label"><i class="fa-solid fa-rotate-left"></i>Refunds</div><div class="stat-value">{{ s.refunds|money }}</div></div>
+</div>
+
+<div class="card">
+  <h2 class="mt-0">Daily revenue</h2>
+  {% if page.by_day %}
+  <div class="day-chart">
+    {% for d in page.by_day %}<div class="col" style="height: {{ [d.percent, 1]|max }}%;" title="{{ d.label }}: {{ d.amount|money }} ({{ d.quantity }} sales)"></div>{% endfor %}
+  </div>
+  <div class="muted small" style="display:flex;justify-content:space-between;margin-top:6px;"><span>{{ page.by_day[0].label }}</span><span>{{ page.by_day[-1].label }}</span></div>
+  {% else %}<div class="empty">No sales in this period.</div>{% endif %}
+</div>
+
+<div class="card">
+  <h2 class="mt-0">Sales by hour</h2>
+  {% if page.summary.transactions %}
+  <div class="day-chart">
+    {% for h in page.by_hour %}<div class="col" style="height: {{ [h.percent, 1]|max }}%;" title="{{ h.label }}: {{ h.amount|money }} ({{ h.quantity }} sales)"></div>{% endfor %}
+  </div>
+  <div class="muted small" style="display:flex;justify-content:space-between;margin-top:6px;"><span>12AM</span><span>12PM</span><span>11PM</span></div>
+  {% else %}<div class="empty">No sales in this period.</div>{% endif %}
+</div>
+
+<div class="grid-2">
+  <div class="card"><h2 class="mt-0">Best sellers (revenue)</h2>{{ bar_list(page.top_products, lime=true) }}</div>
+  <div class="card"><h2 class="mt-0">Revenue by category</h2>{{ bar_list(page.by_category) }}</div>
+  <div class="card"><h2 class="mt-0">Payment methods</h2>{{ bar_list(page.by_payment) }}</div>
+  <div class="card">
+    <h2 class="mt-0">Cashier productivity</h2>
+    <table>
+      <thead><tr><th>Cashier</th><th class="text-right">Sales</th><th class="text-right">Revenue</th><th class="text-right">Compliance</th></tr></thead>
+      <tbody>
+      {% for c in page.by_cashier %}
+        <tr><td>{{ c.name }}</td><td class="text-right">{{ c.transactions }}</td><td class="text-right">{{ c.revenue|money }}</td>
+            <td class="text-right">{% if c.compliance_percent is not none %}{{ c.compliance_percent }}%{% else %}—{% endif %}</td></tr>
+      {% else %}<tr><td colspan="4" class="empty">No activity.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.waste and 'view_profit_loss' in permissions %}
+  <div class="card"><h2 class="mt-0">Waste &amp; shrinkage (at cost)</h2>{{ bar_list(page.waste) }}</div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 class="mt-0">Inventory snapshot</h2>
+  <div class="card-grid" style="margin-bottom:0;">
+    <div class="stat-pill"><div class="stat-value">{{ page.inventory.products or 0 }}</div><div class="stat-label">Products</div></div>
+    <div class="stat-pill"><div class="stat-value">{{ page.inventory.units or 0 }}</div><div class="stat-label">Units on hand</div></div>
+    {% if 'view_cost_prices' in permissions or 'view_profit_loss' in permissions %}
+    <div class="stat-pill"><div class="stat-value">{{ page.inventory.cost_value|money }}</div><div class="stat-label">Value at cost</div></div>
+    {% endif %}
+    <div class="stat-pill"><div class="stat-value">{{ page.inventory.retail_value|money }}</div><div class="stat-label">Value at retail</div></div>
+    <div class="stat-pill"><div class="stat-value">{{ page.inventory.low_stock or 0 }}</div><div class="stat-label">Low / out of stock</div></div>
+  </div>
+</div>
+{% endblock %}

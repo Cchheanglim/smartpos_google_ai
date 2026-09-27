@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Shift #{{ page.session.id }}{% endblock %}
+{% block page_title %}Cash Drawer Audit{% endblock %}
+{% block content %}
+<a class="muted small" href="{{ url_for('attendance.audit') }}"><i class="fa-solid fa-arrow-left"></i> Back to audit</a>
+<h1 style="margin-top:6px;">{{ page.session.user_name }} — shift #{{ page.session.id }}</h1>
+<p class="subtitle">{{ page.session.clock_in|dt }} → {{ page.session.clock_out|dt if page.session.clock_out else 'still open' }}</p>
+<div class="card-grid">
+  <div class="stat-card"><div class="stat-label">Opening float</div><div class="stat-value">{{ page.session.opening_float|money }}</div></div>
+  <div class="stat-card"><div class="stat-label">Expected cash</div><div class="stat-value">{{ page.session.expected_cash|money if page.session.expected_cash is not none else page.session.drawer_balance|money }}</div></div>
+  <div class="stat-card"><div class="stat-label">Counted cash</div><div class="stat-value">{{ page.session.counted_cash|money if page.session.counted_cash is not none else '—' }}</div></div>
+</div>
+<div class="card">
+  <h2 class="mt-0">Cash movements</h2>
+  <table>
+    <thead><tr><th>Kind</th><th>Reference</th><th>By</th><th>When</th><th class="text-right">Amount</th></tr></thead>
+    <tbody>
+    {% for m in page.movements %}
+      <tr><td>{{ m.kind.label }}</td><td class="small">{{ m.reference }}</td><td>{{ m.created_by_name }}</td>
+          <td class="small">{{ m.created_at|dt }}</td>
+          <td class="text-right {{ 'text-success' if m.amount >= 0 else 'text-danger' }}">{{ '%+.2f'|format(m.amount) }}</td></tr>
+    {% else %}<tr><td colspan="5" class="empty">No movements.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if page.session.is_open %}
+<div class="card" style="max-width:480px;">
+  <h2 class="mt-0">Force close (manager count)</h2>
+  <form method="post" action="{{ url_for('attendance.force_close', attendance_id=page.session.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="usd">Counted cash (USD)</label><input id="usd" name="usd" type="number" min="0" step="0.01" value="0">
+    <label for="notes">Notes</label><input id="notes" name="notes" placeholder="Reason for force close">
+    <button class="btn btn-danger" type="submit" style="margin-top:10px;">Force close shift</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

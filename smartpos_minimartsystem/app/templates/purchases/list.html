@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import status_pill %}
+{% block title %}Purchase orders{% endblock %}
+{% block page_title %}Purchase Orders{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Purchase orders</h1><p class="subtitle">Supplier procurement: draft → ordered → received.</p></div>
+  <a class="btn btn-primary" href="{{ url_for('purchases.create_order') }}"><i class="fa-solid fa-plus"></i> New order</a>
+</div>
+<div class="card-grid">
+  {% for st in ['draft','ordered','received','cancelled'] %}
+  <a class="stat-card {{ 'active' if page.status == st }}" style="text-decoration:none;" href="{{ url_for('purchases.list_orders', status=st) }}">
+    <div class="stat-label">{{ st.title() }}</div><div class="stat-value">{{ page.counts.get(st, 0) }}</div>
+  </a>
+  {% endfor %}
+</div>
+<div class="card">
+  <div class="table-responsive">
+  <table>
+    <thead><tr><th>Reference</th><th>Supplier</th><th>Expected</th><th>Status</th><th class="text-right">Total</th><th></th></tr></thead>
+    <tbody>
+    {% for o in page.orders %}
+      <tr>
+        <td><a href="{{ url_for('purchases.view_order', po_id=o.id) }}">{{ o.reference }}</a></td>
+        <td>{{ o.supplier_name }}</td>
+        <td class="small {{ 'text-danger' if o.is_overdue }}">{{ o.expected_date or '—' }}</td>
+        <td>{{ status_pill(o.status) }}</td>
+        <td class="text-right">{{ o.total_cost|money }}</td>
+        <td><a href="{{ url_for('purchases.view_order', po_id=o.id) }}" title="View"><i class="fa-solid fa-eye"></i></a></td>
+      </tr>
+    {% else %}<tr><td colspan="6" class="empty">No purchase orders yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import delete_button %}
+{% block title %}Suppliers{% endblock %}
+{% block page_title %}Suppliers{% endblock %}
+{% block content %}
+<h1>Suppliers</h1>
+<p class="subtitle">Companies you buy stock from.</p>
+<div class="grid-3-1">
+  <div class="card">
+    <div class="table-responsive">
+    <table>
+      <thead><tr><th>Supplier</th><th>Contact</th><th>Address</th><th class="text-right">Products</th><th></th></tr></thead>
+      <tbody>
+      {% for s in suppliers %}
+        <tr>
+          <td><strong>{{ s.name }}</strong></td>
+          <td class="small">{{ s.contact_name }}<div class="muted">{{ s.phone }}{% if s.email %} · {{ s.email }}{% endif %}</div></td>
+          <td class="small muted">{{ s.address }}</td>
+          <td class="text-right"><a href="{{ url_for('products.list_products', supplier_id=s.id) }}">{{ s.product_count }}</a></td>
+          <td><div class="icon-actions">
+            <a href="{{ url_for('suppliers.edit_supplier', supplier_id=s.id) }}" title="Edit"><i class="fa-solid fa-pen"></i></a>
+            {{ delete_button(url_for('suppliers.delete_supplier', supplier_id=s.id), 'Delete', 'Delete supplier ' ~ s.name ~ '?') }}
+          </div></td>
+        </tr>
+      {% else %}<tr><td colspan="5" class="empty">No suppliers yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  <div class="card">
+    <h2 class="mt-0">Add supplier</h2>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% include "inventory/_supplier_fields.html" %}
+      <button class="btn btn-primary" type="submit" style="margin-top:14px;width:100%;"><i class="fa-solid fa-plus"></i> Add supplier</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

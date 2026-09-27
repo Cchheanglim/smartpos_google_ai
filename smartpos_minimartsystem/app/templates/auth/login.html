@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · {{ store_name }} POS</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card">
+    <div style="text-align:center;margin-bottom:22px;">
+      <img src="{{ url_for('static', filename='logo.svg') }}" alt="" width="64" height="64">
+      <h2 style="margin:10px 0 2px;">{{ store_name }} SmartPOS</h2>
+      <p class="subtitle" style="margin:0;">Inventory &amp; Point of Sale — staff sign in</p>
+    </div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+    <form method="post" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email" value="{{ email }}" placeholder="you@smartpos.local" required autofocus>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" placeholder="••••••••" required>
+      <label style="display:flex;gap:8px;align-items:center;color:var(--text-dark);">
+        <input type="checkbox" name="remember"> Keep me signed in on this device
+      </label>
+      <button type="submit" class="btn btn-primary" style="width:100%;margin-top:16px;padding:12px;">
+        <i class="fa-solid fa-right-to-bracket"></i> Sign in
+      </button>
+    </form>
+    <div class="muted small" style="margin-top:18px;border-top:1px solid var(--border-color);padding-top:12px;">
+      <strong>Demo accounts</strong> (password <code>password123</code>):<br>
+      admin@ · assistant@ · inventory@ · cashier@ <span>smartpos.local</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

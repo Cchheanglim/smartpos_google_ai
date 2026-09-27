@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Dashboard{% endblock %} · {{ store_name }} POS</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <script>
+    /* Apply the saved light/dark theme before first paint. */
+    (function () {
+      try { document.documentElement.setAttribute('data-theme', localStorage.getItem('smartpos-theme') || 'light'); } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+{% from "partials/_macros.html" import avatar %}
+<div class="bg-blobs" aria-hidden="true"><span class="blob blob-violet"></span><span class="blob blob-lime"></span></div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-main">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="" width="34" height="34">
+        <span>{{ store_name }}</span>
+      </div>
+    </div>
+    <nav>
+      {% set ep = request.endpoint or '' %}
+      <a href="{{ url_for('dashboard.index') }}" class="{{ 'active' if ep == 'dashboard.index' }}"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+
+      {% if 'process_sale' in permissions %}
+      <div class="nav-section">Sales</div>
+      <a href="{{ url_for('checkout.index') }}" class="{{ 'active' if ep.startswith('checkout.') }}"><i class="fa-solid fa-cart-shopping"></i><span>POS Checkout</span></a>
+      {% endif %}
+      {% if 'process_sale' in permissions or 'view_reports' in permissions or 'process_refund' in permissions %}
+      <a href="{{ url_for('sales.history') }}" class="{{ 'active' if ep.startswith('sales.') and ep != 'sales.refund_log' }}"><i class="fa-solid fa-clock-rotate-left"></i><span>Sales History</span></a>
+      {% endif %}
+      {% if 'process_refund' in permissions or 'view_reports' in permissions %}
+      <a href="{{ url_for('sales.refund_log') }}" class="{{ 'active' if ep == 'sales.refund_log' }}"><i class="fa-solid fa-rotate-left"></i><span>Refund Log</span></a>
+      {% endif %}
+      {% if 'manage_loyalty_customers' in permissions %}
+      <a href="{{ url_for('customers.list_customers') }}" class="{{ 'active' if ep.startswith('customers.') }}"><i class="fa-solid fa-users-viewfinder"></i><span>Loyalty Customers</span></a>
+      {% endif %}
+      {% if 'process_sale' in permissions or 'adjust_drawer_cash' in permissions %}
+      <a href="{{ url_for('attendance.my_shift') }}" class="{{ 'active' if ep == 'attendance.my_shift' }}"><i class="fa-solid fa-cash-register"></i><span>My Shift &amp; Drawer</span></a>
+      {% endif %}
+
+      {% if 'manage_products' in permissions or 'adjust_stock' in permissions or 'view_cost_prices' in permissions or 'manage_categories' in permissions %}
+      <div class="nav-section">Inventory</div>
+      {% if 'manage_products' in permissions or 'adjust_stock' in permissions or 'view_cost_prices' in permissions %}
+      <a href="{{ url_for('products.list_products') }}" class="{{ 'active' if ep.startswith('products.') }}"><i class="fa-solid fa-boxes-stacked"></i><span>Products &amp; Stock</span></a>
+      {% endif %}
+      {% if 'manage_categories' in permissions %}
+      <a href="{{ url_for('categories.list_categories') }}" class="{{ 'active' if ep.startswith('categories.') }}"><i class="fa-solid fa-tags"></i><span>Categories</span></a>
+      {% endif %}
+      {% if 'manage_products' in permissions %}
+      <a href="{{ url_for('suppliers.list_suppliers') }}" class="{{ 'active' if ep.startswith('suppliers.') }}"><i class="fa-solid fa-truck-field"></i><span>Suppliers</span></a>
+      <a href="{{ url_for('purchases.list_orders') }}" class="{{ 'active' if ep.startswith('purchases.') }}"><i class="fa-solid fa-truck-ramp-box"></i><span>Purchase Orders</span></a>
+      {% endif %}
+      {% endif %}
+
+      <div class="nav-section">Team</div>
+      <a href="{{ url_for('tasks.board') }}" class="{{ 'active' if ep.startswith('tasks.') }}"><i class="fa-solid fa-list-check"></i><span>Tasks</span></a>
+
+      {% if 'view_reports' in permissions %}
+      <div class="nav-section">Insights</div>
+      <a href="{{ url_for('reports.index') }}" class="{{ 'active' if ep.startswith('reports.') }}"><i class="fa-solid fa-chart-line"></i><span>Analytics &amp; Reports</span></a>
+      {% endif %}
+
+      {% if 'manage_users' in permissions or 'manage_roles' in permissions or 'manage_shifts' in permissions or 'manage_cashier_accounts' in permissions %}
+      <div class="nav-section">Administration</div>
+      {% if 'manage_users' in permissions %}
+      <a href="{{ url_for('staff.list_staff') }}" class="{{ 'active' if ep.startswith('staff.') and ep != 'staff.shifts' }}"><i class="fa-solid fa-user-group"></i><span>Staff Management</span></a>
+      {% endif %}
+      {% if 'manage_shifts' in permissions %}
+      <a href="{{ url_for('staff.shifts') }}" class="{{ 'active' if ep == 'staff.shifts' }}"><i class="fa-solid fa-calendar-days"></i><span>Work Shifts</span></a>
+      {% endif %}
+      {% if 'manage_cashier_accounts' in permissions %}
+      <a href="{{ url_for('attendance.audit') }}" class="{{ 'active' if ep.startswith('attendance.') }}"><i class="fa-solid fa-vault"></i><span>Cash Drawer Audit</span></a>
+      {% endif %}
+      {% if 'manage_roles' in permissions %}
+      <a href="{{ url_for('roles.index') }}" class="{{ 'active' if ep.startswith('roles.') }}"><i class="fa-solid fa-shield-halved"></i><span>Roles &amp; Permissions</span></a>
+      {% endif %}
+      {% endif %}
+      <a href="{{ url_for('profile.index') }}" class="{{ 'active' if ep.startswith('profile.') }}"><i class="fa-solid fa-circle-user"></i><span>My Profile</span></a>
+    </nav>
+    <div class="user-box">
+      <div class="user-row">
+        {{ avatar(current_user) }}
+        <div>
+          <div class="user-name">{{ current_user.name }}</div>
+          <span class="role-tag">{{ current_user.role_display_name }}</span>
+        </div>
+      </div>
+      <div class="user-actions">
+        <a href="{{ url_for('auth.switch_user') }}" class="ghost-btn" title="Switch user"><i class="fa-solid fa-right-left"></i></a>
+        <a href="{{ url_for('auth.lock', engage=1) }}" class="ghost-btn" title="Lock terminal"><i class="fa-solid fa-lock"></i></a>
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="logout-btn" title="Log out"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+        </form>
+      </div>
+    </div>
+  </aside>
+
+  <div class="content-col">
+    <header class="top-header">
+      <div style="font-weight:600;font-size:15px;">{% block page_title %}{% endblock %}</div>
+      <div class="header-right">
+        <span><i class="fa-regular fa-calendar"></i> {{ today_label }}</span>
+        <button type="button" class="theme-btn" onclick="toggleTheme()" title="Toggle dark mode"><i class="fa-solid fa-circle-half-stroke"></i></button>
+      </div>
+    </header>
+    <main class="main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category if category in ['error','success','info','warning'] else 'info' }}" role="alert">
+            <span>
+              {% if category == 'success' %}<i class="fa-solid fa-circle-check"></i>
+              {% elif category == 'error' %}<i class="fa-solid fa-circle-exclamation"></i>
+              {% elif category == 'warning' %}<i class="fa-solid fa-triangle-exclamation"></i>
+              {% else %}<i class="fa-solid fa-circle-info"></i>{% endif %}
+              {{ message }}
+            </span>
+          </div>
+        {% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+<script>
+  function toggleTheme() {
+    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('smartpos-theme', next); } catch (e) {}
+  }
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

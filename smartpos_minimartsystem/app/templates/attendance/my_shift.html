@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}My Shift{% endblock %}
+{% block page_title %}My Shift &amp; Drawer{% endblock %}
+{% block content %}
+<h1>My shift &amp; cash drawer</h1>
+{% if page.session %}
+<p class="subtitle">Clocked in {{ page.session.clock_in|dt }} · opening float {{ page.session.opening_float|money }} · {{ page.session.duration_hours }}h so far.</p>
+<div class="card-grid">
+  <div class="stat-card"><div class="stat-label"><i class="fa-solid fa-vault"></i>Drawer balance</div><div class="stat-value">{{ page.session.drawer_balance|money }}</div></div>
+  <div class="stat-card"><div class="stat-label"><i class="fa-solid fa-receipt"></i>Sales this shift</div><div class="stat-value">{{ page.session.sale_count }}</div></div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2 class="mt-0">Cash movements</h2>
+    <table>
+      <tbody>
+      {% for m in page.movements %}
+        <tr><td>{{ m.kind.label }}{% if m.reference %} <span class="muted small">· {{ m.reference }}</span>{% endif %}</td>
+            <td class="muted small">{{ m.created_at|dt }}</td>
+            <td class="text-right {{ 'text-success' if m.amount >= 0 else 'text-danger' }}">{{ '%+.2f'|format(m.amount) }}</td></tr>
+      {% else %}<tr><td class="empty">No movements yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    {% if 'adjust_drawer_cash' in permissions %}
+    <h2 class="mt-0">Add / remove cash</h2>
+    <form method="post" action="{{ url_for('attendance.adjust_cash') }}" class="form-row">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div><label>Direction</label>
+        <select name="direction"><option value="in">Cash in</option><option value="out">Cash out</option></select></div>
+      <div><label>Amount (USD)</label><input name="amount" type="number" min="0.01" step="0.01" required></div>
+      <div style="flex:2;"><label>Reason</label><input name="reason" required placeholder="e.g. change top-up"></div>
+      <div style="flex:0;align-self:flex-end;"><button class="btn btn-secondary" type="submit">Apply</button></div>
+    </form>
+    {% endif %}
+    <h2>Close shift</h2>
+    <form method="post" action="{{ url_for('attendance.clock_out') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <p class="small muted">Count the physical cash in the drawer and enter it below.</p>
+      <div class="form-row">
+        <div><label for="usd">Counted cash (USD)</label><input id="usd" name="usd" type="number" min="0" step="0.01" value="0"></div>
+        <div><label for="khr">Counted cash (KHR, optional)</label><input id="khr" name="khr" type="number" min="0" step="100" value="0"></div>
+      </div>
+      <label for="notes">Notes</label><input id="notes" name="notes" placeholder="Optional">
+      <button class="btn btn-danger" type="submit" style="margin-top:12px;"><i class="fa-solid fa-lock"></i> Clock out &amp; close drawer</button>
+    </form>
+  </div>
+</div>
+{% else %}
+<p class="subtitle">Open your register with your starting cash float to begin taking payments.</p>
+<div class="card" style="max-width:480px;">
+  <form method="post" action="{{ url_for('attendance.clock_in') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="usd">Opening float (USD)</label>
+    <input id="usd" name="usd" type="number" min="0" step="0.01" value="0" required>
+    <label for="notes">Notes</label><input id="notes" name="notes" placeholder="Optional">
+    <button class="btn btn-lime" type="submit" style="margin-top:12px;width:100%;"><i class="fa-solid fa-play"></i> Clock in</button>
+  </form>
+</div>
+{% endif %}
+
+{% if page.history %}
+<div class="card" style="margin-top:20px;">
+  <h2 class="mt-0">My shift history</h2>
+  <table>
+    <thead><tr><th>Clock in</th><th>Clock out</th><th>Float</th><th>Counted</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for h in page.history %}
+      <tr>
+        <td class="small">{{ h.clock_in|dt }}</td>
+        <td class="small">{{ h.clock_out|dt if h.clock_out else 'Open' }}</td>
+        <td>{{ h.opening_float|money }}</td>
+        <td>{{ h.counted_cash|money if h.counted_cash is not none else '—' }}</td>
+        <td>{% if h.status %}<span class="badge drawer-status {{ h.status.css }}">{{ h.status.label }}</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

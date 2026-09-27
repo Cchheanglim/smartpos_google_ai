@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Terminal locked · {{ store_name }} POS</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card">
+    <div style="text-align:center;margin-bottom:22px;">
+      <i class="fa-solid fa-lock" style="font-size:40px;color:var(--primary);"></i>
+      <h2 style="margin:10px 0 2px;">Terminal locked</h2>
+      <p class="subtitle" style="margin:0;">Your shift stays open — enter your password to continue as {{ user.name }}.</p>
+    </div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+    <form method="post" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" placeholder="••••••••" required autofocus>
+      <button type="submit" class="btn btn-primary" style="width:100%;margin-top:16px;padding:12px;">
+        <i class="fa-solid fa-unlock"></i> Unlock
+      </button>
+    </form>
+    <div class="muted small" style="margin-top:18px;border-top:1px solid var(--border-color);padding-top:12px;text-align:center;">
+      Not you? <form method="post" action="{{ url_for('auth.logout') }}" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" style="background:none;border:none;color:var(--primary);text-decoration:underline;cursor:pointer;">Log out instead</button></form>
+    </div>
+  </div>
+</div>
+</body>
+</html>
